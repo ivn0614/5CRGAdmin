@@ -65,13 +65,8 @@ const Landing = () => {
               >
                 LOGIN NOW
               </button>
-              <button className="bg-transparent border-2 border-white text-white py-2 px-6 rounded-lg transition duration-300 font-bold text-base hover:bg-white hover:text-navy-900">
-                LEARN MORE
-              </button>
             </div>
           </div>
-
-          {/* Right Side Card - More compact */}
           <div className="w-full md:w-1/2 max-w-md">
             <div className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-white/20 transform transition duration-500 hover:scale-105">
               <div className="flex justify-center mb-3">

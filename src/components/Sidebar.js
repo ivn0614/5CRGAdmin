@@ -106,7 +106,17 @@ const Sidebar = () => {
                 <path d="M8 3v4"></path>
                 <path d="M12 14l2 2 4-4"></path>
             </svg>
-        )
+        ),
+        partners: (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 5H7V2h10v3z"></path>
+                <path d="M14 12a4 4 0 0 1-8 0"></path>
+                <path d="M10 12V8"></path>
+                <path d="M21 15v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5"></path>
+                <path d="M18 12a4 4 0 0 0-8 0"></path>
+                <path d="M14 12V8"></path>
+            </svg>
+)
     };
 
     const mainActions = [
@@ -117,6 +127,7 @@ const Sidebar = () => {
         { name: 'Events', path: '/events', icon: icons.events },
         { name: 'Help Center', path: '/help', icon: icons.help },
         { name: 'News', path: '/news', icon: icons.news },
+        { name: 'Partners', path: '/partners', icon: icons.partners }
     ];
 
     const adminActions = [

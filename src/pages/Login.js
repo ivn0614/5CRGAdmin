@@ -226,12 +226,6 @@ const handleSubmit = async (e) => {
                 "Sign In"
               )}
             </button>
-            
-            <div className="text-center">
-              <p className="text-gray-300 text-xs">
-                No account? <span className="text-blue-400 cursor-pointer hover:underline">Contact your administrator</span>
-              </p>
-            </div>
           </form>
         </div>
       </main>
@@ -241,11 +235,6 @@ const handleSubmit = async (e) => {
         <div className="container mx-auto">
           <div className="border-t border-gray-700 pt-2 flex flex-col md:flex-row justify-between items-center">
             <p className="text-xs text-gray-400 mb-1 md:mb-0">© 2025 5th Civil Relations Group, CRSAFP. All rights reserved.</p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-xs text-gray-400 hover:text-gray-300">Privacy</a>
-              <a href="#" className="text-xs text-gray-400 hover:text-gray-300">Terms</a>
-              <a href="#" className="text-xs text-gray-400 hover:text-gray-300">Support</a>
-            </div>
           </div>
         </div>
       </footer>

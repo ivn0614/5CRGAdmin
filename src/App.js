@@ -11,6 +11,7 @@ import Users from './pages/UserManager';
 import Profile from './pages/Profile';
 import LandingPage from './pages/LandingPage';
 import Ads from './pages/Ads';
+import Partners from './pages/Partners';
 import ProtectedRoute from './components/ProtectedRoute';
 
 
@@ -67,7 +68,11 @@ const App = () => {
           <Ads />
         </ProtectedRoute>
       } />
-      
+      <Route path="/partners" element={
+        <ProtectedRoute>
+          <Partners />
+        </ProtectedRoute>
+      } />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
