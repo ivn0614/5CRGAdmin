@@ -15,10 +15,8 @@ import {
   query, 
   orderByChild 
 } from 'firebase/database';
-import { db, auth } from '../Firebase'; // Import the initialized Firebase instances
-import { useNavigate } from 'react-router-dom'; // Import navigate from React Router
-
-// Create a service layer for Firebase operations
+import { db, auth } from '../Firebase';
+import { useNavigate } from 'react-router-dom';
 const userService = {
   async createUser(userData, password) {
     try {
@@ -75,8 +73,6 @@ const userService = {
   async fetchUsers() {
     try {
       const usersRef = ref(db, 'users');
-      
-      // Try to use the ordered query first
       try {
         const usersQuery = query(usersRef, orderByChild("createdAt"));
         const snapshot = await get(usersQuery);
@@ -93,7 +89,6 @@ const userService = {
         
         return usersList;
       } catch (indexError) {
-        // If ordering fails, fall back to getting all users without ordering
         console.warn("Ordered query failed, falling back to unordered fetch:", indexError.message);
         
         const snapshot = await get(usersRef);
@@ -107,8 +102,6 @@ const userService = {
             ...childSnapshot.val(),
           });
         });
-        
-        // Sort the results manually after fetching
         return usersList.sort((a, b) => {
           const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -121,7 +114,6 @@ const userService = {
     }
   },
 
-  // Add a function to get current user's data
   async getCurrentUserData(userId) {
     try {
       const userRef = ref(db, 'users/' + userId);
@@ -143,7 +135,7 @@ const userService = {
 };
 
 const UsersPage = () => {
-  const navigate = useNavigate(); // Initialize navigate for redirection
+  const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [currentUserData, setCurrentUserData] = useState(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -154,7 +146,7 @@ const UsersPage = () => {
     password: '',
     fullName: '',
     position: 'User',
-    department: 'IDT'  // Set default department to IDT
+    department: 'IDT'
   });
   const [isEditing, setIsEditing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -168,23 +160,19 @@ const UsersPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [usersCache, setUsersCache] = useState(null);
   const [lastFetchTime, setLastFetchTime] = useState(null);
-  const [redirectMessage, setRedirectMessage] = useState(false); // New state for showing redirect message
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const [redirectMessage, setRedirectMessage] = useState(false);
+  const CACHE_DURATION = 5 * 60 * 1000;
   
-  // Department options for the dropdown
   const departmentOptions = ["IDT", "Operations", "Logistics", "Finance", "Group Commander"];
   
   const pendingOperationRef = useRef(null);
 
-  // Show notification helper
   const showNotification = useCallback((message, type) => {
     setNotification({ show: true, message, type });
     setTimeout(() => setNotification({ show: false, message: '', type: '' }), 5000);
   }, []);
 
-  // Check authentication state and authorization on component mount
   useEffect(() => {
-    // Check if Firebase is initialized
     if (!db || !auth) {
       showNotification("Firebase initialization error", "error");
       console.error("Firebase not initialized properly");
@@ -197,22 +185,17 @@ const UsersPage = () => {
       
       if (user) {
         try {
-          // Fetch the user's complete data including position
           const userData = await userService.getCurrentUserData(user.uid);
           setCurrentUserData(userData);
-          
-          // Check if user is an Admin
           if (userData && userData.position === "Admin") {
             setIsAuthorized(true);
             fetchUsers(true);
           } else {
             setIsAuthorized(false);
-            // Show access denied message before redirect
             setRedirectMessage(true);
-            // Delay redirect to allow user to see the message
             setTimeout(() => {
               navigate('/dashboard');
-            }, 3000); // Redirect after 3 seconds
+            }, 3000);
           }
         } catch (error) {
           console.error("Error checking authorization:", error);
@@ -223,7 +206,6 @@ const UsersPage = () => {
           }, 3000);
         }
       } else {
-        // No user is signed in, redirect to login
         navigate('/login');
       }
       
@@ -232,8 +214,6 @@ const UsersPage = () => {
 
     return () => unsubscribe();
   }, [navigate, showNotification]);
-
-  // Optimized fetch users with caching
   const fetchUsers = useCallback(async (forceRefresh = false) => {
     if (!isAuthorized) return;
     
@@ -261,14 +241,10 @@ const UsersPage = () => {
       setIsLoading(false);
     }
   }, [usersCache, lastFetchTime, showNotification, isAuthorized]);
-
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-
-  // Create user function
   const handleCreateUser = async (e) => {
     e.preventDefault();
     if (!formData.email || !formData.password || !formData.fullName) {
@@ -301,7 +277,7 @@ const UsersPage = () => {
         password: '',
         fullName: '',
         position: 'User',
-        department: 'IDT'  // Reset to default department
+        department: 'IDT' 
       });
     } catch (err) {
       console.error("Create user error:", err);
@@ -310,8 +286,6 @@ const UsersPage = () => {
       setIsSubmitting(false);
     }
   };
-
-  // Update user function
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -344,7 +318,7 @@ const UsersPage = () => {
         password: '',
         fullName: '',
         position: 'User',
-        department: 'IDT'  // Reset to default department
+        department: 'IDT'
       });
     } catch (err) {
       console.error("Update user error:", err);
@@ -353,22 +327,18 @@ const UsersPage = () => {
       setIsSubmitting(false);
     }
   };
-
-  // Edit handler
   const handleEdit = (user) => {
     setFormData({
       email: user.email,
       password: '', 
       fullName: user.fullName,
       position: user.position || "User",
-      // Use the user's department if it exists in our options, otherwise default to IDT
       department: departmentOptions.includes(user.department) ? user.department : "IDT"
     });
     setCurrentUserId(user.id);
     setIsEditing(true);
   };
 
-  // Delete user function
   const handleDelete = async (userId) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       setIsLoading(true);
@@ -384,8 +354,6 @@ const UsersPage = () => {
       }
     }
   };
-
-  // Cancel editing
   const handleCancel = () => {
     setIsEditing(false);
     setCurrentUserId(null);
@@ -394,11 +362,9 @@ const UsersPage = () => {
       password: '',
       fullName: '',
       position: 'User',
-      department: 'IDT'  // Reset to default department
+      department: 'IDT'
     });
   };
-
-  // Show loading screen while checking authentication
   if (isAuthChecking) {
     return (
       <Layout>
@@ -414,8 +380,6 @@ const UsersPage = () => {
       </Layout>
     );
   }
-
-  // Show access denied message before redirecting
   if (redirectMessage) {
     return (
       <Layout>
@@ -435,13 +399,9 @@ const UsersPage = () => {
       </Layout>
     );
   }
-
-  // If not authorized, don't render the component content
   if (!isAuthorized) {
-    return null; // We're already redirecting, so just return null
+    return null;
   }
-
-  // Render the component
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
@@ -463,8 +423,6 @@ const UsersPage = () => {
             <span className="block sm:inline">{notification.message}</span>
           </div>
         )}
-
-        {/* User Form */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">
             {isEditing ? 'Edit User' : 'Create New User'}
@@ -601,8 +559,6 @@ const UsersPage = () => {
             </div>
           </form>
         </div>
-
-        {/* Users List */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">Users List ({users.length})</h2>

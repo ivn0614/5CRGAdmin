@@ -25,13 +25,10 @@ const NewsPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentNewsId, setCurrentNewsId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  
-  // New state for detailed view modal
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailContent, setDetailContent] = useState(null);
 
   useEffect(() => {
-    // Fetch news from Firestore
     const fetchNews = async () => {
       try {
         const newsCollection = collection(firestore, 'news');
@@ -70,7 +67,6 @@ const NewsPage = () => {
         pictures: [...formData.pictures, ...files]
       });
       
-      // Create preview URLs
       files.forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -102,26 +98,20 @@ const NewsPage = () => {
     
     try {
       for (const file of files) {
-        // Only process actual File objects (not existing URLs)
         if (file instanceof File) {
-          // Create a unique filename with timestamp to avoid collisions
           const timestamp = new Date().getTime();
           const fileName = `${timestamp}_${file.name}`;
           const fileRef = storageRef(storage, `news-images/${newsId}/${fileName}`);
           
-          // Upload the file
           await uploadBytes(fileRef, file);
           
-          // Get the download URL
           const downloadURL = await getDownloadURL(fileRef);
           
           uploadedUrls.push(downloadURL);
           
-          // Update progress
           uploadedCount++;
           setUploadProgress(Math.round((uploadedCount / totalFiles) * 100));
         } else if (typeof file === 'string' && file.startsWith('http')) {
-          // Keep existing URLs
           uploadedUrls.push(file);
         }
       }
@@ -152,27 +142,21 @@ const NewsPage = () => {
         updatedAt: new Date().toISOString()
       };
       
-      // If creating new news
       if (!isEditing) {
         newsData.createdAt = new Date().toISOString();
         
-        // First create the document to get an ID
         const docRef = await addDoc(collection(firestore, 'news'), newsData);
         newsId = docRef.id;
         
-        // Upload pictures if there are files
         if (formData.pictures && formData.pictures.length > 0) {
           pictureURLs = await uploadPictures(formData.pictures, newsId);
           
-          // Update the document with the picture URLs
           if (pictureURLs.length > 0) {
             await updateDoc(doc(firestore, 'news', newsId), {
               pictureURLs: pictureURLs
             });
           }
         }
-        
-        // Refresh the news list
         const updatedNews = {
           id: newsId,
           ...newsData,
@@ -181,16 +165,12 @@ const NewsPage = () => {
         
         setNews([updatedNews, ...news]);
       } 
-      // If editing existing news
       else {
-        // Upload new pictures if there are files
         let existingUrls = [];
         
-        // Get existing picture URLs that are kept
         const existingPics = picturePreview.filter(pic => typeof pic === 'string' && pic.startsWith('http'));
         existingUrls = existingPics;
         
-        // Upload new pictures
         const newPics = formData.pictures.filter(pic => pic instanceof File);
         if (newPics.length > 0) {
           const newUrls = await uploadPictures(newPics, newsId);
@@ -201,19 +181,15 @@ const NewsPage = () => {
         
         newsData.pictureURLs = pictureURLs;
         
-        // Update the document
         await updateDoc(doc(firestore, 'news', newsId), newsData);
         
-        // Update local state
         setNews(news.map(item => 
           item.id === newsId ? { ...item, ...newsData } : item
         ));
       }
       
-      // Reset form and state
       resetForm();
       
-      // Optionally show success message
       alert("News saved successfully!");
     } catch (error) {
       console.error("Error saving news:", error);
@@ -248,10 +224,9 @@ const NewsPage = () => {
       content: item.content,
       publishDate: item.publishDate,
       author: item.author,
-      pictures: [] // We don't set file objects when editing
+      pictures: []
     });
     
-    // Set picture previews from existing URLs
     if (item.pictureURLs && item.pictureURLs.length > 0) {
       setPicturePreview(item.pictureURLs);
     } else {
@@ -268,28 +243,22 @@ const NewsPage = () => {
     setLoading(true);
     
     try {
-      // Delete the news from Firestore
       await deleteDoc(doc(firestore, 'news', newsId));
       
-      // Delete the pictures from storage if they exist
       if (pictureURLs && pictureURLs.length > 0) {
         try {
           for (const url of pictureURLs) {
-            // Extract the path from the URL
             const picPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
             const fileRef = storageRef(storage, picPath);
             await deleteObject(fileRef);
           }
         } catch (error) {
           console.error("Error deleting pictures:", error);
-          // Continue even if picture deletion fails
         }
       }
       
-      // Update local state
       setNews(news.filter(item => item.id !== newsId));
       
-      // Show success message
       alert("News deleted successfully!");
     } catch (error) {
       console.error("Error deleting news:", error);
@@ -299,7 +268,6 @@ const NewsPage = () => {
     }
   };
 
-  // Updated handleViewNewsDetails to use a modal instead of an alert
   const handleViewNewsDetails = async (newsId) => {
     try {
       const newsDoc = doc(firestore, 'news', newsId);
@@ -326,7 +294,6 @@ const NewsPage = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  // Component for detail modal
   const DetailModal = ({ content, onClose }) => {
     if (!content) return null;
     
@@ -359,16 +326,12 @@ const NewsPage = () => {
                 </div>
               </div>
               
-              {/* Content */}
               <div className="prose max-w-none mb-8">
-                {/* Render content with line breaks */}
                 {content.content.split('\n').map((paragraph, idx) => (
                   paragraph ? <p key={idx} className="mb-4">{paragraph}</p> : <br key={idx} />
                 ))}
               </div>
             </div>
-            
-            {/* Images */}
             {content.pictureURLs && content.pictureURLs.length > 0 && (
               <div className="mt-6">
                 <h3 className="text-lg font-semibold mb-3">Images</h3>
@@ -645,7 +608,6 @@ const NewsPage = () => {
         )}
       </div>
       
-      {/* Detail modal */}
       {showDetailModal && detailContent && (
         <DetailModal 
           content={detailContent} 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { firestore, storage } from '../Firebase'; // Updated to use firestore
+import { firestore, storage } from '../Firebase';
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
@@ -24,7 +24,6 @@ const EventsPage = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
-    // Fetch events from Firestore
     const fetchEvents = async () => {
       try {
         const eventsCollection = collection(firestore, 'events');
@@ -62,8 +61,6 @@ const EventsPage = () => {
         ...formData,
         logo: file
       });
-
-      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result);
@@ -76,18 +73,13 @@ const EventsPage = () => {
     if (!file) return null;
     
     try {
-      // Create a unique filename with timestamp to avoid collisions
       const timestamp = new Date().getTime();
       const fileName = `${timestamp}_${file.name}`;
       const fileRef = storageRef(storage, `event-logos/${eventId}/${fileName}`);
       
-      // Upload the file
       await uploadBytes(fileRef, file);
       
-      // Get the download URL
       const downloadURL = await getDownloadURL(fileRef);
-      
-      // Update progress
       setUploadProgress(100);
       
       return downloadURL;
@@ -117,28 +109,18 @@ const EventsPage = () => {
         status: status,
         updatedAt: new Date().toISOString()
       };
-      
-      // If creating new event
       if (!isEditing) {
         eventData.createdAt = new Date().toISOString();
-        
-        // First create the document to get an ID
         const docRef = await addDoc(collection(firestore, 'events'), eventData);
         eventId = docRef.id;
-        
-        // Upload logo if there's a file
         if (formData.logo && formData.logo instanceof File) {
           logoURL = await uploadLogo(formData.logo, eventId);
-          
-          // Update the document with the logo URL
           if (logoURL) {
             await updateDoc(doc(firestore, 'events', eventId), {
               logoURL: logoURL
             });
           }
         }
-        
-        // Refresh the events list
         const updatedEvent = {
           id: eventId,
           ...eventData,
@@ -147,30 +129,19 @@ const EventsPage = () => {
         
         setEvents([updatedEvent, ...events]);
       } 
-      // If editing existing event
       else {
-        // Upload new logo if there's a file
         if (formData.logo && formData.logo instanceof File) {
           logoURL = await uploadLogo(formData.logo, eventId);
           eventData.logoURL = logoURL;
         } else if (logoPreview && typeof logoPreview === 'string' && logoPreview.startsWith('http')) {
-          // Keep existing logo URL
           eventData.logoURL = logoPreview;
         }
-        
-        // Update the document
         await updateDoc(doc(firestore, 'events', eventId), eventData);
-        
-        // Update local state
         setEvents(events.map(event => 
           event.id === eventId ? { ...event, ...eventData } : event
         ));
       }
-
-      // Reset form and state
       resetForm();
-      
-      // Optionally show success message
       alert("Event saved successfully!");
     } catch (error) {
       console.error("Error saving event:", error);
@@ -209,7 +180,7 @@ const EventsPage = () => {
       startDate: event.startDate,
       endDate: event.endDate,
       description: event.description,
-      logo: null // We don't set the file object when editing
+      logo: null
     });
     
     if (event.logoURL) {
@@ -226,26 +197,18 @@ const EventsPage = () => {
     setLoading(true);
     
     try {
-      // Delete the event from Firestore
       await deleteDoc(doc(firestore, 'events', eventId));
-      
-      // Delete the logo from storage if it exists
       if (logoURL) {
         try {
-          // Extract the path from the URL
           const logoPath = decodeURIComponent(logoURL.split('/o/')[1].split('?')[0]);
           const fileRef = storageRef(storage, logoPath);
           await deleteObject(fileRef);
         } catch (error) {
           console.error("Error deleting logo:", error);
-          // Continue even if logo deletion fails
         }
       }
-      
-      // Update local state
       setEvents(events.filter(event => event.id !== eventId));
       
-      // Show success message
       alert("Event deleted successfully!");
     } catch (error) {
       console.error("Error deleting event:", error);

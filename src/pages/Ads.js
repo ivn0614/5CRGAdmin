@@ -29,12 +29,10 @@ const AdsPage = () => {
   const [currentAdId, setCurrentAdId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   
-  // State for detailed view modal
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailAd, setDetailAd] = useState(null);
 
   useEffect(() => {
-    // Fetch ads from Firestore
     const fetchAds = async () => {
       try {
         const adsCollection = collection(firestore, 'ads');
@@ -72,8 +70,6 @@ const AdsPage = () => {
         ...formData,
         image: file
       });
-      
-      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -94,23 +90,18 @@ const AdsPage = () => {
     if (!file) return null;
     
     try {
-      // Only process actual File objects (not existing URLs)
       if (file instanceof File) {
-        // Create a unique filename with timestamp to avoid collisions
         const timestamp = new Date().getTime();
         const fileName = `${timestamp}_${file.name}`;
         const fileRef = storageRef(storage, `ad-images/${adId}/${fileName}`);
-        
-        // Upload the file
+
         await uploadBytes(fileRef, file);
-        
-        // Get the download URL
+
         const downloadURL = await getDownloadURL(fileRef);
         
         setUploadProgress(100);
         return downloadURL;
       } else if (typeof file === 'string' && file.startsWith('http')) {
-        // Keep existing URL
         return file;
       }
       
@@ -143,27 +134,20 @@ const AdsPage = () => {
         updatedAt: new Date().toISOString()
       };
       
-      // If creating new ad
+
       if (!isEditing) {
         adData.createdAt = new Date().toISOString();
-        
-        // First create the document to get an ID
+
         const docRef = await addDoc(collection(firestore, 'ads'), adData);
         adId = docRef.id;
-        
-        // Upload image if there is a file
         if (formData.image) {
           imageURL = await uploadImage(formData.image, adId);
-          
-          // Update the document with the image URL
           if (imageURL) {
             await updateDoc(doc(firestore, 'ads', adId), {
               imageURL: imageURL
             });
           }
         }
-        
-        // Refresh the ad list
         const updatedAd = {
           id: adId,
           ...adData,
@@ -172,9 +156,7 @@ const AdsPage = () => {
         
         setAds([updatedAd, ...ads]);
       } 
-      // If editing existing ad
       else {
-        // Upload new image if there is a file
         if (formData.image) {
           if (formData.image instanceof File) {
             imageURL = await uploadImage(formData.image, adId);
@@ -183,20 +165,13 @@ const AdsPage = () => {
             adData.imageURL = formData.image;
           }
         }
-        
-        // Update the document
         await updateDoc(doc(firestore, 'ads', adId), adData);
-        
-        // Update local state
         setAds(ads.map(item => 
           item.id === adId ? { ...item, ...adData } : item
         ));
       }
-      
-      // Reset form and state
       resetForm();
-      
-      // Show success message
+
       alert("Ad saved successfully!");
     } catch (error) {
       console.error("Error saving ad:", error);
@@ -236,11 +211,9 @@ const AdsPage = () => {
       endDate: item.endDate,
       url: item.url,
       position: item.position || '',
-      isActive: item.isActive !== false, // Default to true if not specified
+      isActive: item.isActive !== false,
       image: item.imageURL || null
     });
-    
-    // Set image preview from existing URL
     if (item.imageURL) {
       setImagePreview(item.imageURL);
     } else {
@@ -257,26 +230,19 @@ const AdsPage = () => {
     setLoading(true);
     
     try {
-      // Delete the ad from Firestore
       await deleteDoc(doc(firestore, 'ads', adId));
       
-      // Delete the image from storage if it exists
       if (imageURL) {
         try {
-          // Extract the path from the URL
           const picPath = decodeURIComponent(imageURL.split('/o/')[1].split('?')[0]);
           const fileRef = storageRef(storage, picPath);
           await deleteObject(fileRef);
         } catch (error) {
           console.error("Error deleting image:", error);
-          // Continue even if image deletion fails
         }
       }
-      
-      // Update local state
       setAds(ads.filter(item => item.id !== adId));
       
-      // Show success message
       alert("Ad deleted successfully!");
     } catch (error) {
       console.error("Error deleting ad:", error);
@@ -312,7 +278,6 @@ const AdsPage = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  // Component for detail modal
   const DetailModal = ({ ad, onClose }) => {
     if (!ad) return null;
     
@@ -361,11 +326,9 @@ const AdsPage = () => {
                 </div>
               )}
               
-              {/* Description */}
               <div className="mt-4">
                 <h3 className="font-semibold text-lg mb-2">Description</h3>
                 <div className="prose max-w-none">
-                  {/* Render description with line breaks */}
                   {ad.description.split('\n').map((paragraph, idx) => (
                     paragraph ? <p key={idx} className="mb-4">{paragraph}</p> : <br key={idx} />
                   ))}
@@ -373,7 +336,6 @@ const AdsPage = () => {
               </div>
             </div>
             
-            {/* Image */}
             {ad.imageURL && (
               <div className="mt-6">
                 <h3 className="text-lg font-semibold mb-3">Ad Image</h3>
@@ -690,7 +652,6 @@ const AdsPage = () => {
         )}
       </div>
       
-      {/* Detail modal */}
       {showDetailModal && detailAd && (
         <DetailModal 
           ad={detailAd} 

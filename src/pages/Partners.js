@@ -24,13 +24,10 @@ const PartnersPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentPartnerId, setCurrentPartnerId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  
-  // State for detailed view modal
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailPartner, setDetailPartner] = useState(null);
 
   useEffect(() => {
-    // Fetch partners from Firestore
     const fetchPartners = async () => {
       try {
         const partnersCollection = collection(firestore, 'partners');
@@ -68,8 +65,6 @@ const PartnersPage = () => {
         ...formData,
         logo: file
       });
-
-      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result);
@@ -82,18 +77,14 @@ const PartnersPage = () => {
     if (!file) return null;
     
     try {
-      // Create a unique filename with timestamp to avoid collisions
       const timestamp = new Date().getTime();
       const fileName = `${timestamp}_${file.name}`;
       const fileRef = storageRef(storage, `partner-logos/${partnerId}/${fileName}`);
       
-      // Upload the file
       await uploadBytes(fileRef, file);
       
-      // Get the download URL
       const downloadURL = await getDownloadURL(fileRef);
       
-      // Update progress
       setUploadProgress(100);
       
       return downloadURL;
@@ -124,28 +115,20 @@ const PartnersPage = () => {
         },
         updatedAt: new Date().toISOString()
       };
-      
-      // If creating new partner
       if (!isEditing) {
         partnerData.createdAt = new Date().toISOString();
         
-        // First create the document to get an ID
         const docRef = await addDoc(collection(firestore, 'partners'), partnerData);
         partnerId = docRef.id;
         
-        // Upload logo if there's a file
         if (formData.logo && formData.logo instanceof File) {
           logoURL = await uploadLogo(formData.logo, partnerId);
-          
-          // Update the document with the logo URL
           if (logoURL) {
             await updateDoc(doc(firestore, 'partners', partnerId), {
               logoURL: logoURL
             });
           }
         }
-        
-        // Refresh the partners list
         const updatedPartner = {
           id: partnerId,
           ...partnerData,
@@ -154,30 +137,22 @@ const PartnersPage = () => {
         
         setPartners([updatedPartner, ...partners]);
       } 
-      // If editing existing partner
       else {
-        // Upload new logo if there's a file
         if (formData.logo && formData.logo instanceof File) {
           logoURL = await uploadLogo(formData.logo, partnerId);
           partnerData.logoURL = logoURL;
         } else if (logoPreview && typeof logoPreview === 'string' && logoPreview.startsWith('http')) {
-          // Keep existing logo URL
           partnerData.logoURL = logoPreview;
         }
         
-        // Update the document
         await updateDoc(doc(firestore, 'partners', partnerId), partnerData);
         
-        // Update local state
         setPartners(partners.map(partner => 
           partner.id === partnerId ? { ...partner, ...partnerData } : partner
         ));
       }
-
-      // Reset form and state
       resetForm();
-      
-      // Show success message
+  
       alert("Partner saved successfully!");
     } catch (error) {
       console.error("Error saving partner:", error);
@@ -216,7 +191,7 @@ const PartnersPage = () => {
       instagram: partner.socialMedia?.instagram || '',
       twitter: partner.socialMedia?.twitter || '',
       youtube: partner.socialMedia?.youtube || '',
-      logo: null // We don't set the file object when editing
+      logo: null
     });
     
     if (partner.logoURL) {
@@ -233,26 +208,20 @@ const PartnersPage = () => {
     setLoading(true);
     
     try {
-      // Delete the partner from Firestore
       await deleteDoc(doc(firestore, 'partners', partnerId));
       
-      // Delete the logo from storage if it exists
       if (logoURL) {
         try {
-          // Extract the path from the URL
           const logoPath = decodeURIComponent(logoURL.split('/o/')[1].split('?')[0]);
           const fileRef = storageRef(storage, logoPath);
           await deleteObject(fileRef);
         } catch (error) {
           console.error("Error deleting logo:", error);
-          // Continue even if logo deletion fails
         }
       }
       
-      // Update local state
       setPartners(partners.filter(partner => partner.id !== partnerId));
       
-      // Show success message
       alert("Partner deleted successfully!");
     } catch (error) {
       console.error("Error deleting partner:", error);
@@ -282,10 +251,8 @@ const PartnersPage = () => {
       alert("Failed to fetch partner details.");
     }
   };
-
-  // Helper to check if URL is valid
   const isValidUrl = (url) => {
-    if (!url) return true; // Empty is fine
+    if (!url) return true;
     try {
       new URL(url);
       return true;
@@ -294,7 +261,6 @@ const PartnersPage = () => {
     }
   };
 
-  // Helper to format URLs with proper protocol
   const formatUrl = (url) => {
     if (!url) return '';
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -303,7 +269,6 @@ const PartnersPage = () => {
     return url;
   };
 
-  // Component for detail modal
   const DetailModal = ({ partner, onClose }) => {
     if (!partner) return null;
     
@@ -350,19 +315,14 @@ const PartnersPage = () => {
                 )}
               </div>
             </div>
-            
-            {/* Description */}
             <div className="mb-6">
               <h3 className="font-semibold text-lg mb-2">About {partner.name}</h3>
               <div className="prose max-w-none">
-                {/* Render description with line breaks */}
                 {partner.description.split('\n').map((paragraph, idx) => (
                   paragraph ? <p key={idx} className="mb-4">{paragraph}</p> : <br key={idx} />
                 ))}
               </div>
             </div>
-            
-            {/* Social Media */}
             {(partner.socialMedia?.facebook || partner.socialMedia?.instagram || 
               partner.socialMedia?.twitter || partner.socialMedia?.youtube) && (
               <div className="mb-6">
@@ -750,8 +710,6 @@ const PartnersPage = () => {
           </div>
         )}
       </div>
-      
-      {/* Detail modal */}
       {showDetailModal && detailPartner && (
         <DetailModal 
           partner={detailPartner} 

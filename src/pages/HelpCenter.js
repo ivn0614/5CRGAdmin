@@ -6,7 +6,6 @@
     const [activeCategory, setActiveCategory] = useState('getting-started');
     const [expandedArticle, setExpandedArticle] = useState(null);
 
-    // Help categories and articles
     const helpCategories = [
       {
         id: 'getting-started',
@@ -50,7 +49,6 @@
       }
     ];
 
-    // Filter articles based on search query
     const filteredCategories = helpCategories.map(category => {
       return {
         ...category,
@@ -61,7 +59,6 @@
       };
     }).filter(category => category.articles.length > 0);
 
-    // Sample article content (would normally come from a database)
     const articleContent = {
       'usr-1':`
       # User Roles and Permissions
@@ -834,14 +831,11 @@
             <h3 className="text-xl font-bold mb-4 text-blue-600 border-b border-blue-200 pb-2">{title.trim()}</h3>
             <div className="pl-2">
               {contentLines.map((line, i) => {
-                // Empty lines
                 if (!line.trim()) return null;
                 
-                // Bold text handling
                 const boldPattern = /\*\*(.*?)\*\*/g;
                 const textWithBold = line.replace(boldPattern, '<strong class="font-semibold text-blue-900">$1</strong>');
                 
-                // List items
                 if (line.trim().startsWith('-')) {
                   const listContent = line.replace('-', '').trim();
                   const formattedListContent = listContent.replace(boldPattern, '<strong class="font-semibold text-blue-900">$1</strong>');
@@ -854,7 +848,6 @@
                   );
                 }
                 
-                // Handle subheadings
                 if (line.trim().startsWith('###')) {
                   const headingText = line.replace('###', '').trim();
                   return <h4 key={i} className="font-semibold text-lg text-blue-800 mt-6 mb-3">{headingText}</h4>;
@@ -872,7 +865,6 @@
       return <div className="prose max-w-none">{sections}</div>;
     };
 
-    // Generate featured articles for the homepage
     const featuredArticles = helpCategories.flatMap(category => 
       category.articles.slice(0, 1).map(article => ({
         ...article,
@@ -880,7 +872,6 @@
       }))
     ).slice(0, 4);
 
-    // Function to get a lighter version of category color for backgrounds
     const getLightColor = (color) => {
       const colorMap = {
         'bg-blue-500': 'bg-blue-50',
@@ -897,7 +888,6 @@
           <h1 className="text-3xl font-bold mb-3">Help Center</h1>
           <p className="text-lg opacity-90">Find answers to common questions about the 5th CRG Admin System</p>
           
-          {/* Enhanced Search Bar */}
           <div className="mt-8 relative">
             <input
               type="text"
@@ -910,7 +900,6 @@
           </div>
         </div>
 
-        {/* Featured Articles - Only show on home view */}
         {!searchQuery && !expandedArticle && (
           <div className="mb-10">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Popular Articles</h2>
@@ -936,7 +925,6 @@
         )}
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Enhanced Categories Sidebar */}
           <div className="lg:w-1/4">
             <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
               <h2 className="text-xl font-bold text-gray-800 mb-6 border-b pb-3">Help Topics</h2>
@@ -967,7 +955,6 @@
             </div>
           </div>
 
-          {/* Enhanced Articles Content */}
           <div className="lg:w-3/4">
             {searchQuery ? (
               <div className="bg-white rounded-xl shadow-md p-8 border border-gray-100">
@@ -1020,7 +1007,6 @@
                   <span className="mr-1 transform group-hover:-translate-x-1 transition-transform duration-300">←</span> Back to articles
                 </button>
                 
-                {/* Find article title */}
                 {helpCategories.map(category => 
                   category.articles.filter(article => article.id === expandedArticle)
                 ).flat().map(article => (

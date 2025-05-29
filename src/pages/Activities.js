@@ -38,7 +38,6 @@ const ActivitiesPage = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
-    // Fetch events from Firestore
     const fetchEvents = async () => {
       try {
         const eventsCollection = collection(firestore, 'events');
@@ -89,7 +88,6 @@ const ActivitiesPage = () => {
     fetchEvents();
     fetchActivities();
     
-    // If eventId is provided in URL, set the selected event
     if (eventId) {
       setSelectedEvent(eventId);
     }
@@ -116,8 +114,7 @@ const ActivitiesPage = () => {
         ...formData,
         pictures: [...formData.pictures, ...files]
       });
-      
-      // Create preview URLs
+
       files.forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -149,26 +146,20 @@ const ActivitiesPage = () => {
     
     try {
       for (const file of files) {
-        // Only process actual File objects (not existing URLs)
         if (file instanceof File) {
-          // Create a unique filename with timestamp to avoid collisions
           const timestamp = new Date().getTime();
           const fileName = `${timestamp}_${file.name}`;
           const fileRef = storageRef(storage, `activity-images/${activityId}/${fileName}`);
           
-          // Upload the file
           await uploadBytes(fileRef, file);
           
-          // Get the download URL
           const downloadURL = await getDownloadURL(fileRef);
           
           uploadedUrls.push(downloadURL);
           
-          // Update progress
           uploadedCount++;
           setUploadProgress(Math.round((uploadedCount / totalFiles) * 100));
         } else if (typeof file === 'string' && file.startsWith('http')) {
-          // Keep existing URLs
           uploadedUrls.push(file);
         }
       }
@@ -207,19 +198,16 @@ const ActivitiesPage = () => {
         updatedAt: new Date().toISOString()
       };
       
-      // If creating new activity
+
       if (!isEditing) {
         activityData.createdAt = new Date().toISOString();
         
-        // First create the document to get an ID
         const docRef = await addDoc(collection(firestore, 'activities'), activityData);
         activityId = docRef.id;
         
-        // Upload pictures if there are files
         if (formData.pictures && formData.pictures.length > 0) {
           pictureURLs = await uploadPictures(formData.pictures, activityId);
           
-          // Update the document with the picture URLs
           if (pictureURLs.length > 0) {
             await updateDoc(doc(firestore, 'activities', activityId), {
               pictureURLs: pictureURLs
@@ -227,7 +215,6 @@ const ActivitiesPage = () => {
           }
         }
         
-        // Refresh the activities list
         const updatedActivity = {
           id: activityId,
           ...activityData,
@@ -236,16 +223,12 @@ const ActivitiesPage = () => {
         
         setActivities([updatedActivity, ...activities]);
       } 
-      // If editing existing activity
       else {
-        // Upload new pictures if there are files
         let existingUrls = [];
         
-        // Get existing picture URLs that are kept
         const existingPics = picturePreview.filter(pic => typeof pic === 'string' && pic.startsWith('http'));
         existingUrls = existingPics;
         
-        // Upload new pictures
         const newPics = formData.pictures.filter(pic => pic instanceof File);
         if (newPics.length > 0) {
           const newUrls = await uploadPictures(newPics, activityId);
@@ -256,19 +239,15 @@ const ActivitiesPage = () => {
         
         activityData.pictureURLs = pictureURLs;
         
-        // Update the document
         await updateDoc(doc(firestore, 'activities', activityId), activityData);
         
-        // Update local state
         setActivities(activities.map(activity => 
           activity.id === activityId ? { ...activity, ...activityData } : activity
         ));
       }
       
-      // Reset form and state
       resetForm();
       
-      // Optionally show success message
       alert("Activity saved successfully!");
     } catch (error) {
       console.error("Error saving activity:", error);
@@ -307,10 +286,9 @@ const ActivitiesPage = () => {
       endDate: activity.endDate,
       startTime: activity.startTime,
       endTime: activity.endTime,
-      pictures: [] // We don't set file objects when editing
+      pictures: []
     });
     
-    // Set picture previews from existing URLs
     if (activity.pictureURLs && activity.pictureURLs.length > 0) {
       setPicturePreview(activity.pictureURLs);
     } else {
@@ -328,28 +306,23 @@ const ActivitiesPage = () => {
     setLoading(true);
     
     try {
-      // Delete the activity from Firestore
       await deleteDoc(doc(firestore, 'activities', activityId));
       
-      // Delete the pictures from storage if they exist
       if (pictureURLs && pictureURLs.length > 0) {
         try {
           for (const url of pictureURLs) {
-            // Extract the path from the URL
             const picPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
             const fileRef = storageRef(storage, picPath);
             await deleteObject(fileRef);
           }
         } catch (error) {
           console.error("Error deleting pictures:", error);
-          // Continue even if picture deletion fails
         }
       }
-      
-      // Update local state
+    
       setActivities(activities.filter(activity => activity.id !== activityId));
       
-      // Show success message
+
       alert("Activity deleted successfully!");
     } catch (error) {
       console.error("Error deleting activity:", error);
@@ -427,10 +400,9 @@ const DetailModal = ({ content, onClose }) => {
               </div>
             </div>
             
-            {/* Description */}
             <div className="prose max-w-none mb-8">
               <h3 className="text-lg font-semibold mb-2">Description</h3>
-              {/* Render description with line breaks */}
+             
               {content.description.split('\n').map((paragraph, idx) => (
                 paragraph ? <p key={idx} className="mb-4">{paragraph}</p> : <br key={idx} />
               ))}
@@ -785,7 +757,7 @@ const DetailModal = ({ content, onClose }) => {
           </div>
         )}
       </div>
-      {/* Detail modal */}
+      
       {showDetailModal && detailContent && (
         <DetailModal 
           content={detailContent} 

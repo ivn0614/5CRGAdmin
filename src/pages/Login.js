@@ -5,6 +5,7 @@ import { ref, get } from 'firebase/database';
 import { auth, db } from '../Firebase';
 import crglogo from "../assets/crglogo.png";
 import crslogo from "../assets/crslogo.png";
+import bgImage from "../assets/bg-landing.jpg";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -29,75 +30,62 @@ const Login = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.email || !formData.password) {
+      setErrorMessage('Email and password are required');
+      return;
+    }
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!formData.email || !formData.password) {
-    setErrorMessage('Email and password are required');
-    return;
-  }
-
-  setIsLoading(true);
-  setErrorMessage('');
-  
-  try {
-    // First attempt to authenticate with Firebase Auth
-    const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-    const uid = userCredential.user.uid;
+    setIsLoading(true);
+    setErrorMessage('');
     
-    // After authentication succeeds, check if user exists in the database
-    const userRef = ref(db, 'users/' + uid);
-    const userSnapshot = await get(userRef);
-    
-    if (userSnapshot.exists()) {
-      // User exists in database, proceed with login
-      console.log("Login successful for user:", uid);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      const uid = userCredential.user.uid;
+      const userRef = ref(db, 'users/' + uid);
+      const userSnapshot = await get(userRef);
       
-      // Redirect to the intended page or dashboard
-      const from = location.state?.from || '/dashboard';
-      navigate(from);
-    } else {
-      // User authenticated but not in database, sign out
-      await auth.signOut();
-      setErrorMessage('User not registered in the system. Please contact an administrator.');
+      if (userSnapshot.exists()) {
+        const from = location.state?.from || '/dashboard';
+        navigate(from);
+      } else {
+        await auth.signOut();
+        setErrorMessage('User not registered in the system. Please contact an administrator.');
+      }
+    } catch (error) {
+      switch (error.code) {
+        case 'auth/user-not-found':
+          setErrorMessage('No account found with this email address');
+          break;
+        case 'auth/wrong-password':
+          setErrorMessage('Incorrect password');
+          break;
+        case 'auth/invalid-email':
+          setErrorMessage('Invalid email format');
+          break;
+        case 'auth/too-many-requests':
+          setErrorMessage('Too many failed login attempts. Please try again later');
+          break;
+        case 'auth/invalid-credential':
+          setErrorMessage('Invalid credentials. Please check your email and password.');
+          break;
+        default:
+          setErrorMessage('Failed to log in: ' + error.message);
+      }
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Login error:", error);
-    
-    // Handle specific error cases
-    switch (error.code) {
-      case 'auth/user-not-found':
-        setErrorMessage('No account found with this email address');
-        break;
-      case 'auth/wrong-password':
-        setErrorMessage('Incorrect password');
-        break;
-      case 'auth/invalid-email':
-        setErrorMessage('Invalid email format');
-        break;
-      case 'auth/too-many-requests':
-        setErrorMessage('Too many failed login attempts. Please try again later');
-        break;
-      case 'auth/invalid-credential':
-        setErrorMessage('Invalid credentials. Please check your email and password.');
-        break;
-      default:
-        setErrorMessage('Failed to log in: ' + error.message);
-    }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-navy-900 text-white">
-      {/* Header - Made more compact */}
-      <header className="bg-navy-900 py-2 px-6 shadow-md">
+    <div className="min-h-screen bg-gray-900 text-gray-200 flex flex-col">
+      <header className="bg-navy-900 py-4 px-6 border-b border-gray-700">
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center">
-            <img src={crglogo} alt="5th Civil Relations Group" className="h-12 hover:scale-105 transition-transform duration-300" />
+            <img src={crglogo} alt="5th Civil Relations Group" className="h-8 hover:scale-105 transition-transform duration-300" />
             <div className="ml-4">
-              <h1 className="text-xl font-bold">5th Civil Relations Group</h1>
+              <h1 className="text-lg font-medium text-white">5th Civil Relations Group</h1>
               <p className="text-xs text-gray-300">Armed Forces of the Philippines</p>
             </div>
           </div>
@@ -112,12 +100,13 @@ const handleSubmit = async (e) => {
         </div>
       </header>
 
-      {/* Main Content - Optimized spacing */}
       <main 
+        id="login-form"
         className="flex-grow flex flex-col items-center justify-center bg-cover bg-center py-4"
         style={{ 
-          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)), url("/background.jpg")',
-          backgroundAttachment: 'fixed'
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
         }}
       >
         <div className="text-center mb-2">
@@ -126,8 +115,7 @@ const handleSubmit = async (e) => {
         </div>
 
         <div 
-          id="login-form"
-          className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-6 w-full max-w-md border border-white/20 opacity-0 transition-opacity duration-1000 transform hover:scale-100"
+          className="bg-white/10 backdrop-blur-md rounded-xl shadow-2xl p-6 w-full max-w-md border border-white/20"
         >
           <div className="flex justify-center mb-2">
             <img src={crslogo} alt="Logo" className="h-16 drop-shadow-lg" />
@@ -229,13 +217,9 @@ const handleSubmit = async (e) => {
           </form>
         </div>
       </main>
-
-      {/* Footer - Simplified */}
-      <footer className="bg-navy-800 py-3 px-4">
-        <div className="container mx-auto">
-          <div className="border-t border-gray-700 pt-2 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-xs text-gray-400 mb-1 md:mb-0">© 2025 5th Civil Relations Group, CRSAFP. All rights reserved.</p>
-          </div>
+      <footer className="bg-navy-900 py-4 px-6 border-t border-gray-700">
+        <div className="container mx-auto text-center">
+          <p className="text-xs text-gray-400">© 2025 5th Civil Relations Group, CRSAFP. All rights reserved.</p>
         </div>
       </footer>
     </div>

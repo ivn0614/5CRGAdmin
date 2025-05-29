@@ -43,13 +43,9 @@ const Dashboard = () => {
         });
       
       setRecentEvents(recentEventsData);
-      
-      // Fetch activities data
       const activitiesCollection = collection(firestore, 'activities');
       const activitiesSnapshot = await getDocs(activitiesCollection);
       setActivitiesCount(activitiesSnapshot.size);
-      
-      // Fetch upcoming activities (activities with endDate >= today)
       const upcomingActivitiesQuery = query(
         activitiesCollection,
         where('endDate', '>=', today)
@@ -68,8 +64,6 @@ const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  // Helper function to format date range
   const formatDateRange = (startDate, endDate) => {
     const formatDate = (dateString) => {
       const options = { year: 'numeric', month: 'short', day: 'numeric' };
@@ -78,37 +72,28 @@ const Dashboard = () => {
     
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
-
-  // Function to handle event deletion
   const handleDeleteEvent = async (eventId, logoURL) => {
     if (!window.confirm('Are you sure you want to delete this event?')) return;
     
     setLoading(true);
     
     try {
-      // Delete the event from Firestore
       await deleteDoc(doc(firestore, 'events', eventId));
       
-      // Delete the logo from storage if it exists
       if (logoURL) {
         try {
-          // Extract the path from the URL
           const logoPath = decodeURIComponent(logoURL.split('/o/')[1].split('?')[0]);
           const fileRef = storageRef(storage, logoPath);
           await deleteObject(fileRef);
         } catch (error) {
           console.error("Error deleting logo:", error);
-          // Continue even if logo deletion fails
         }
       }
       
-      // Update local state
       setRecentEvents(recentEvents.filter(event => event.id !== eventId));
       
-      // Refetch dashboard data to update counts
       fetchDashboardData();
       
-      // Show success message
       alert("Event deleted successfully!");
     } catch (error) {
       console.error("Error deleting event:", error);
