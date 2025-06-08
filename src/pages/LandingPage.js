@@ -67,7 +67,7 @@ const Landing = () => {
 
       <footer className="border-t py-4 px-6">
         <div className="container mx-auto text-center">
-          <p className="text-xs text-gray-400">© 2025 5th Civil Relations Group, CRSAFP</p>
+          <p className="text-xs text-gray-400">© 2025 5th Civil Relations Group, CRSAFP. All Rights Reserved 2025</p>
         </div>
       </footer>
     </div>

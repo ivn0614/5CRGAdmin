@@ -18,6 +18,12 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Temporary admin credentials (REMOVE IN PRODUCTION)
+  const TEMP_ADMIN = {
+    email: 'admin@crsafp.mil.ph',
+    password: 'TempAdmin2025!'
+  };
+
   useEffect(() => {
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -28,6 +34,13 @@ const Login = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleTempAdminLogin = () => {
+    // Simulate successful admin login
+    console.log('Temporary admin login successful');
+    const from = location.state?.from || '/dashboard';
+    navigate(from);
   };
 
   const handleSubmit = async (e) => {
@@ -41,6 +54,12 @@ const Login = () => {
     setErrorMessage('');
     
     try {
+      // Check for temporary admin credentials first
+      if (formData.email === TEMP_ADMIN.email && formData.password === TEMP_ADMIN.password) {
+        handleTempAdminLogin();
+        return;
+      }
+
       const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
       const uid = userCredential.user.uid;
       const userRef = ref(db, 'users/' + uid);
@@ -76,6 +95,13 @@ const Login = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fillTempAdminCredentials = () => {
+    setFormData({
+      email: TEMP_ADMIN.email,
+      password: TEMP_ADMIN.password
+    });
   };
 
   return (

@@ -10,8 +10,9 @@ import HelpCenter from './pages/HelpCenter';
 import Users from './pages/UserManager';
 import Profile from './pages/Profile';
 import LandingPage from './pages/LandingPage';
-import Ads from './pages/Ads';
 import Partners from './pages/Partners';
+import Inquiries from './pages/Inquiries';
+import MainPageManager from './pages/MainPageManager';
 import ProtectedRoute from './components/ProtectedRoute';
 
 
@@ -63,14 +64,19 @@ const App = () => {
           <Profile />
         </ProtectedRoute>
       } />
-      <Route path="/ads" element={
-        <ProtectedRoute>
-          <Ads />
-        </ProtectedRoute>
-      } />
       <Route path="/partners" element={
         <ProtectedRoute>
           <Partners />
+        </ProtectedRoute>
+      } />
+      <Route path="/inquiries" element={
+        <ProtectedRoute>
+          <Inquiries />
+        </ProtectedRoute>
+      } />
+      <Route path="/mainpagemanager" element={
+        <ProtectedRoute>
+          <MainPageManager />
         </ProtectedRoute>
       } />
       <Route path="*" element={<Navigate to="/" replace />} />

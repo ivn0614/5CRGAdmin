@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
-import crslogo from '../assets/crslogo.png';
+import crglogo from '../assets/crglogo.png';
 import { auth, db } from '../Firebase'; 
 import { onAuthStateChanged } from 'firebase/auth';
 import { ref, get } from 'firebase/database'; 
@@ -94,7 +94,7 @@ const ProfilePage = () => {
               <div className="flex flex-col items-center">
                 <div className="w-36 h-36 rounded-full overflow-hidden mb-4 border-4 border-indigo-100 shadow-md">
                   <img 
-                    src={crslogo} 
+                    src={crglogo} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
                   />

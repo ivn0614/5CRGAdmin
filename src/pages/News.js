@@ -1,13 +1,139 @@
 import React, { useState, useEffect } from 'react';
 import { firestore, storage } from '../Firebase';
-import { 
-  collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, 
-  orderBy, getDoc 
+import {
+  collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query,
+  orderBy, getDoc
 } from 'firebase/firestore';
-import { 
-  ref as storageRef, uploadBytes, getDownloadURL, deleteObject 
+import {
+  ref as storageRef, uploadBytes, getDownloadURL, deleteObject
 } from 'firebase/storage';
 import Layout from '../components/Layout';
+
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const getToastStyles = () => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-500 border-green-600 text-white';
+      case 'error':
+        return 'bg-red-500 border-red-600 text-white';
+      case 'warning':
+        return 'bg-yellow-500 border-yellow-600 text-white';
+      case 'info':
+        return 'bg-blue-500 border-blue-600 text-white';
+      default:
+        return 'bg-gray-500 border-gray-600 text-white';
+    }
+  };
+
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return '✅';
+      case 'error':
+        return '❌';
+      case 'warning':
+        return '⚠️';
+      case 'info':
+        return 'ℹ️';
+      default:
+        return '📢';
+    }
+  };
+
+  return (
+    <div className={`fixed top-4 right-4 z-50 border-l-4 p-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out ${getToastStyles()} max-w-md`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <span className="text-xl mr-3">{getIcon()}</span>
+          <span className="font-medium">{message}</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="ml-4 text-white hover:text-gray-200 font-bold text-lg"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Confirmation Modal Component
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Delete", cancelText = "Cancel", type = "danger" }) => {
+  if (!isOpen) return null;
+
+  const getConfirmButtonStyles = () => {
+    switch (type) {
+      case 'danger':
+        return 'bg-red-600 hover:bg-red-700 text-white';
+      case 'warning':
+        return 'bg-yellow-600 hover:bg-yellow-700 text-white';
+      case 'info':
+        return 'bg-blue-600 hover:bg-blue-700 text-white';
+      default:
+        return 'bg-gray-600 hover:bg-gray-700 text-white';
+    }
+  };
+
+  const getIcon = () => {
+    switch (type) {
+      case 'danger':
+        return '🗑️';
+      case 'warning':
+        return '⚠️';
+      case 'info':
+        return 'ℹ️';
+      default:
+        return '❓';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all duration-300 scale-100">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <div className="flex-shrink-0">
+              <span className="text-3xl">{getIcon()}</span>
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {title}
+              </h3>
+            </div>
+          </div>
+          <div className="mb-6">
+            <p className="text-gray-600">
+              {message}
+            </p>
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              {cancelText}
+            </button>
+            <button
+              onClick={onConfirm}
+              className={`px-4 py-2 rounded-lg transition-colors font-medium ${getConfirmButtonStyles()}`}
+            >
+              {confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const NewsPage = () => {
   const [news, setNews] = useState([]);
@@ -27,6 +153,14 @@ const NewsPage = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailContent, setDetailContent] = useState(null);
+  const [toast, setToast] = useState(null); // Toast state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'danger'
+  });
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -123,6 +257,34 @@ const NewsPage = () => {
     }
   };
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const closeToast = () => {
+    setToast(null);
+  };
+
+  const showConfirmModal = (title, message, onConfirm, type = 'danger') => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type
+    });
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      isOpen: false,
+      title: '',
+      message: '',
+      onConfirm: null,
+      type: 'danger'
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -164,6 +326,7 @@ const NewsPage = () => {
         };
         
         setNews([updatedNews, ...news]);
+        showToast("News saved successfully!", "success");
       } 
       else {
         let existingUrls = [];
@@ -186,14 +349,13 @@ const NewsPage = () => {
         setNews(news.map(item => 
           item.id === newsId ? { ...item, ...newsData } : item
         ));
+        showToast("News saved successfully!", "success");
       }
       
       resetForm();
-      
-      alert("News saved successfully!");
     } catch (error) {
       console.error("Error saving news:", error);
-      alert("Failed to save news. Please try again.");
+      showToast("Failed to save news. Please try again.", "error");
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -238,34 +400,39 @@ const NewsPage = () => {
   };
 
   const handleDeleteNews = async (newsId, pictureURLs) => {
-    if (!window.confirm('Are you sure you want to delete this news article?')) return;
-    
-    setLoading(true);
-    
-    try {
-      await deleteDoc(doc(firestore, 'news', newsId));
-      
-      if (pictureURLs && pictureURLs.length > 0) {
+    showConfirmModal(
+      "Delete News Article",
+      "Are you sure you want to delete this news article?",
+      async () => {
+        closeConfirmModal();
+        setLoading(true);
+        
         try {
-          for (const url of pictureURLs) {
-            const picPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
-            const fileRef = storageRef(storage, picPath);
-            await deleteObject(fileRef);
+          await deleteDoc(doc(firestore, 'news', newsId));
+          
+          if (pictureURLs && pictureURLs.length > 0) {
+            try {
+              for (const url of pictureURLs) {
+                const picPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
+                const fileRef = storageRef(storage, picPath);
+                await deleteObject(fileRef);
+              }
+            } catch (error) {
+              console.error("Error deleting pictures:", error);
+            }
           }
+          
+          setNews(news.filter(item => item.id !== newsId));
+          showToast("News deleted successfully!", "success");
         } catch (error) {
-          console.error("Error deleting pictures:", error);
+          console.error("Error deleting news:", error);
+          showToast("Failed to delete news. Please try again.", "error");
+        } finally {
+          setLoading(false);
         }
-      }
-      
-      setNews(news.filter(item => item.id !== newsId));
-      
-      alert("News deleted successfully!");
-    } catch (error) {
-      console.error("Error deleting news:", error);
-      alert("Failed to delete news. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+      },
+      "danger"
+    );
   };
 
   const handleViewNewsDetails = async (newsId) => {
@@ -281,11 +448,11 @@ const NewsPage = () => {
         });
         setShowDetailModal(true);
       } else {
-        alert("News article not found!");
+        showToast("News article not found!", "warning");
       }
     } catch (error) {
       console.error("Error fetching news details:", error);
-      alert("Failed to fetch news details.");
+      showToast("Failed to fetch news details.", "error");
     }
   };
 
@@ -296,7 +463,7 @@ const NewsPage = () => {
 
   const DetailModal = ({ content, onClose }) => {
     if (!content) return null;
-    
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-auto">
@@ -340,7 +507,7 @@ const NewsPage = () => {
                     <div key={idx} className="relative">
                       <img 
                         src={url} 
-                        alt={`${content.title} ${idx+1}`}
+                        alt={`${content.title} ${idx + 1}`}
                         className="w-full h-64 object-cover rounded-lg shadow-md" 
                       />
                       <a 
@@ -351,7 +518,7 @@ const NewsPage = () => {
                         title="View full size image"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                       </a>
                     </div>
@@ -376,6 +543,24 @@ const NewsPage = () => {
 
   return (
     <Layout>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={closeToast}
+        />
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">News Management</h1>
@@ -529,8 +714,9 @@ const NewsPage = () => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-bold text-navy-900 mb-4">News Articles</h2>
         {loading && !showForm ? (
-          <div className="text-center py-4">
-            <p>Loading news articles...</p>
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <p className="mt-2">Loading news articles...</p>
           </div>
         ) : news.length === 0 ? (
           <p className="text-gray-500 text-center py-4">
@@ -563,7 +749,7 @@ const NewsPage = () => {
                             <img 
                               key={idx} 
                               src={url} 
-                              alt={`${item.title} ${idx+1}`} 
+                              alt={`${item.title} ${idx + 1}`} 
                               className="w-8 h-8 object-cover rounded"
                             />
                           ))}

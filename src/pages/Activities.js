@@ -2,13 +2,134 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { firestore, storage } from '../Firebase';
-import { 
-  collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, 
-  orderBy, where, getDoc 
-} from 'firebase/firestore';
-import { 
-  ref as storageRef, uploadBytes, getDownloadURL, deleteObject 
-} from 'firebase/storage';
+import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, getDoc } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const getToastStyles = () => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-500 border-green-600 text-white';
+      case 'error':
+        return 'bg-red-500 border-red-600 text-white';
+      case 'warning':
+        return 'bg-yellow-500 border-yellow-600 text-white';
+      case 'info':
+        return 'bg-blue-500 border-blue-600 text-white';
+      default:
+        return 'bg-gray-500 border-gray-600 text-white';
+    }
+  };
+
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return '✅';
+      case 'error':
+        return '❌';
+      case 'warning':
+        return '⚠️';
+      case 'info':
+        return 'ℹ️';
+      default:
+        return '📢';
+    }
+  };
+
+  return (
+    <div className={`fixed top-4 right-4 z-50 border-l-4 p-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out ${getToastStyles()} max-w-md`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <span className="text-xl mr-3">{getIcon()}</span>
+          <span className="font-medium">{message}</span>
+        </div>
+        <button
+          onClick={onClose}
+          className="ml-4 text-white hover:text-gray-200 font-bold text-lg"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Confirmation Modal Component
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Delete", cancelText = "Cancel", type = "danger" }) => {
+  if (!isOpen) return null;
+
+  const getConfirmButtonStyles = () => {
+    switch (type) {
+      case 'danger':
+        return 'bg-red-600 hover:bg-red-700 text-white';
+      case 'warning':
+        return 'bg-yellow-600 hover:bg-yellow-700 text-white';
+      case 'info':
+        return 'bg-blue-600 hover:bg-blue-700 text-white';
+      default:
+        return 'bg-gray-600 hover:bg-gray-700 text-white';
+    }
+  };
+
+  const getIcon = () => {
+    switch (type) {
+      case 'danger':
+        return '🗑️';
+      case 'warning':
+        return '⚠️';
+      case 'info':
+        return 'ℹ️';
+      default:
+        return '❓';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all duration-300 scale-100">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <div className="flex-shrink-0">
+              <span className="text-3xl">{getIcon()}</span>
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {title}
+              </h3>
+            </div>
+          </div>
+          <div className="mb-6">
+            <p className="text-gray-600">
+              {message}
+            </p>
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              {cancelText}
+            </button>
+            <button
+              onClick={onConfirm}
+              className={`px-4 py-2 rounded-lg transition-colors font-medium ${getConfirmButtonStyles()}`}
+            >
+              {confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ActivitiesPage = () => {
   const location = useLocation();
@@ -36,6 +157,14 @@ const ActivitiesPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [currentActivityId, setCurrentActivityId] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [toast, setToast] = useState(null); // Toast state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'danger'
+  });
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -171,11 +300,40 @@ const ActivitiesPage = () => {
     }
   };
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const closeToast = () => {
+    setToast(null);
+  };
+
+    // Confirmation modal helper functions
+    const showConfirmModal = (title, message, onConfirm, type = 'danger') => {
+        setConfirmModal({
+            isOpen: true,
+            title,
+            message,
+            onConfirm,
+            type
+        });
+    };
+
+    const closeConfirmModal = () => {
+        setConfirmModal({
+            isOpen: false,
+            title: '',
+            message: '',
+            onConfirm: null,
+            type: 'danger'
+        });
+    };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!selectedEvent) {
-      alert('Please select an event first');
+      showToast('Please select an event first', 'warning');
       return;
     }
     
@@ -197,7 +355,6 @@ const ActivitiesPage = () => {
         eventId: selectedEvent,
         updatedAt: new Date().toISOString()
       };
-      
 
       if (!isEditing) {
         activityData.createdAt = new Date().toISOString();
@@ -222,8 +379,8 @@ const ActivitiesPage = () => {
         };
         
         setActivities([updatedActivity, ...activities]);
-      } 
-      else {
+        showToast("Activity created successfully!", "success");
+      } else {
         let existingUrls = [];
         
         const existingPics = picturePreview.filter(pic => typeof pic === 'string' && pic.startsWith('http'));
@@ -244,14 +401,13 @@ const ActivitiesPage = () => {
         setActivities(activities.map(activity => 
           activity.id === activityId ? { ...activity, ...activityData } : activity
         ));
+        showToast("Activity updated successfully!", "success");
       }
       
       resetForm();
-      
-      alert("Activity saved successfully!");
     } catch (error) {
       console.error("Error saving activity:", error);
-      alert("Failed to save activity. Please try again.");
+      showToast("Failed to save activity. Please try again.", "error");
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -300,37 +456,44 @@ const ActivitiesPage = () => {
     setShowForm(true);
   };
 
-  const handleDeleteActivity = async (activityId, pictureURLs) => {
-    if (!window.confirm('Are you sure you want to delete this activity?')) return;
-    
-    setLoading(true);
-    
-    try {
-      await deleteDoc(doc(firestore, 'activities', activityId));
-      
-      if (pictureURLs && pictureURLs.length > 0) {
+const handleDeleteActivity = async (activityId, pictureURLs) => {
+    showConfirmModal(
+        "Delete Activity",
+        "Are you sure you want to delete this activity?",
+        async () => {
+        closeConfirmModal();
+        setLoading(true);
         try {
-          for (const url of pictureURLs) {
-            const picPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
-            const fileRef = storageRef(storage, picPath);
-            await deleteObject(fileRef);
-          }
-        } catch (error) {
-          console.error("Error deleting pictures:", error);
-        }
-      }
-    
-      setActivities(activities.filter(activity => activity.id !== activityId));
-      
-
-      alert("Activity deleted successfully!");
-    } catch (error) {
-      console.error("Error deleting activity:", error);
-      alert("Failed to delete activity. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+            // Delete from Firestore first
+            await deleteDoc(doc(firestore, 'activities', activityId));
+            
+            // Delete images from storage if they exist
+            if (pictureURLs && pictureURLs.length > 0) {
+                for (const url of pictureURLs) {
+                    try {
+                      const picPath = decodeURIComponent(url.split('/o/')[1].split('?')[0]);
+                      const fileRef = storageRef(storage, picPath);
+                      await deleteObject(fileRef);
+                    } catch (imageError) {
+                      console.warn("Error deleting image:", imageError);
+                    }
+                }
+            }
+            setActivities(prevActivities => 
+                prevActivities.filter(activity => activity.id !== activityId)
+            );
+            
+            showToast("Activity deleted successfully!", "success");
+            } catch (error) {
+                console.error("Error deleting activity:", error);
+                showToast("Failed to delete activity. Please try again.", "error");
+            } finally {
+                setLoading(false);
+            }
+        },
+        "danger"
+    );
+};
 
   const handleViewActivityDetails = async (activityId) => {
     try {
@@ -345,11 +508,11 @@ const ActivitiesPage = () => {
         });
         setShowDetailModal(true);
       } else {
-        alert("Activity not found!");
+        showToast("Activity not found!", "warning");
       }
     } catch (error) {
       console.error("Error fetching activity details:", error);
-      alert("Failed to fetch activity details.");
+      showToast("Failed to fetch activity details.", "error");
     }
   };
 
@@ -363,97 +526,114 @@ const ActivitiesPage = () => {
     return event ? event.name : 'Unknown Event';
   };
 
-const DetailModal = ({ content, onClose }) => {
-  if (!content) return null;
-  
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-auto">
-        <div className="sticky top-0 bg-white p-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-navy-900">{content.name}</h2>
-          <button 
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 focus:outline-none"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-        
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex flex-wrap items-center text-sm text-gray-600 mb-4">
-              <div className="mr-6 mb-2">
-                <span className="font-semibold">Theme:</span> {content.theme}
-              </div>
-              <div className="mr-6 mb-2">
-                <span className="font-semibold">Event:</span> {getEventName(content.eventId)}
-              </div>
-              <div className="mr-6 mb-2">
-                <span className="font-semibold">Date:</span> {content.startDate === content.endDate 
-                  ? formatDate(content.startDate) 
-                  : `${formatDate(content.startDate)} to ${formatDate(content.endDate)}`}
-              </div>
-              <div className="mb-2">
-                <span className="font-semibold">Time:</span> {content.startTime} - {content.endTime}
-              </div>
-            </div>
-            
-            <div className="prose max-w-none mb-8">
-              <h3 className="text-lg font-semibold mb-2">Description</h3>
-             
-              {content.description.split('\n').map((paragraph, idx) => (
-                paragraph ? <p key={idx} className="mb-4">{paragraph}</p> : <br key={idx} />
-              ))}
-            </div>
+  const DetailModal = ({ content, onClose }) => {
+    if (!content) return null;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-auto">
+          <div className="sticky top-0 bg-white p-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-xl font-bold text-navy-900">{content.name}</h2>
+            <button 
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
           
-          {/* Images */}
-          {content.pictureURLs && content.pictureURLs.length > 0 && (
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-3">Images</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {content.pictureURLs.map((url, idx) => (
-                  <div key={idx} className="relative">
-                    <img 
-                      src={url} 
-                      alt={`${content.name} ${idx+1}`}
-                      className="w-full h-64 object-cover rounded-lg shadow-md" 
-                    />
-                    <a 
-                      href={url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="absolute bottom-2 right-2 bg-white bg-opacity-75 p-2 rounded-full shadow-md hover:bg-opacity-100"
-                      title="View full size image"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                      </svg>
-                    </a>
-                  </div>
+          <div className="p-6">
+            <div className="mb-6">
+              <div className="flex flex-wrap items-center text-sm text-gray-600 mb-4">
+                <div className="mr-6 mb-2">
+                  <span className="font-semibold">Theme:</span> {content.theme}
+                </div>
+                <div className="mr-6 mb-2">
+                  <span className="font-semibold">Event:</span> {getEventName(content.eventId)}
+                </div>
+                <div className="mr-6 mb-2">
+                  <span className="font-semibold">Date:</span> {content.startDate === content.endDate 
+                    ? formatDate(content.startDate) 
+                    : `${formatDate(content.startDate)} to ${formatDate(content.endDate)}`}
+                </div>
+                <div className="mb-2">
+                  <span className="font-semibold">Time:</span> {content.startTime} - {content.endTime}
+                </div>
+              </div>
+              
+              <div className="prose max-w-none mb-8">
+                <h3 className="text-lg font-semibold mb-2">Description</h3>
+               
+                {content.description.split('\n').map((paragraph, idx) => (
+                  paragraph ? <p key={idx} className="mb-4">{paragraph}</p> : <br key={idx} />
                 ))}
               </div>
             </div>
-          )}
-        </div>
-        
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
-          <button
-            onClick={onClose}
-            className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-          >
-            Close
-          </button>
+            
+            {content.pictureURLs && content.pictureURLs.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-3">Images</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {content.pictureURLs.map((url, idx) => (
+                    <div key={idx} className="relative">
+                      <img 
+                        src={url} 
+                        alt={`${content.name} ${idx+1}`}
+                        className="w-full h-64 object-cover rounded-lg shadow-md" 
+                      />
+                      <a 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="absolute bottom-2 right-2 bg-white bg-opacity-75 p-2 rounded-full shadow-md hover:bg-opacity-100"
+                        title="View full size image"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+            <button
+              onClick={onClose}
+              className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   return (
     <Layout>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={closeToast}
+        />
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Activities Management</h1>
@@ -673,8 +853,9 @@ const DetailModal = ({ content, onClose }) => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-bold text-navy-900 mb-4">Activities List</h2>
         {loading && !showForm ? (
-          <div className="text-center py-4">
-            <p>Loading activities...</p>
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <p className="mt-2">Loading activities...</p>
           </div>
         ) : filteredActivities.length === 0 ? (
           <p className="text-gray-500 text-center py-4">
@@ -713,7 +894,7 @@ const DetailModal = ({ content, onClose }) => {
                             <img 
                               key={idx} 
                               src={url} 
-                              alt={`${activity.name} ${idx+1}`} 
+                              alt={`${activity.name} ${idx + 1}`} 
                               className="w-8 h-8 object-cover rounded"
                             />
                           ))}
@@ -771,4 +952,4 @@ const DetailModal = ({ content, onClose }) => {
   );
 };
 
-export default ActivitiesPage;
+export default ActivitiesPage;   

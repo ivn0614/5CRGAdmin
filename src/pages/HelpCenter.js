@@ -46,6 +46,33 @@
           { id: 'usr-2', title: 'Adding New Administrators', excerpt: 'How to add and manage system administrators.' },
           { id: 'usr-3', title: 'Profile Settings', excerpt: 'Updating your profile and notification preferences.' }
         ]
+      },
+      {
+        id: 'mainpage-manager',
+        name: 'Mainpage Manager',
+        icon: '🖼️',
+        color: 'bg-indigo-500',
+        articles: [
+          { id: 'mm-1', title: 'Mainpage Manager Guide', excerpt: 'Learn how to customize the main landing page.' }
+        ]
+      },
+      {
+        id: 'partners',
+        name: 'Partners',
+        icon: '🤝',
+        color: 'bg-teal-500',
+        articles: [
+          { id: 'prt-1', title: 'Managing Partners', excerpt: 'Guide to managing external partners and their roles.' }
+        ]
+      },
+      {
+        id: 'inquiries',
+        name: 'Inquiries',
+        icon: '📧',
+        color: 'bg-red-500',
+        articles: [
+          { id: 'inq-1', title: 'Handling Inquiries', excerpt: 'Manage user-submitted questions and support requests.' }
+        ]
       }
     ];
 
@@ -806,6 +833,256 @@
   - Review all uploaded pictures before saving to ensure quality and relevance
   - Regularly update activity details if schedules or content changes
   `,
+  'mm-1': `
+    # Mainpage Manager Guide
+
+The Mainpage Manager in the 5th CRG Admin System allows administrators to customize and manage the content displayed on the system's main landing page, ensuring a professional and engaging user experience.
+
+## Mainpage Management Overview
+
+The Mainpage Manager provides tools to configure banners, featured content, and announcements on the system's landing page.
+
+- **Access Mainpage Manager** 🖼️ — Navigate to Mainpage Manager via the sidebar menu
+- **Customize Content** 📝 — Update banners, text, and featured sections
+- **Preview Changes** 👁️ — View real-time previews of mainpage updates
+- **Publish Updates** ✅ — Save and deploy changes to the live system
+
+## Accessing the Mainpage Manager
+
+Administrators can access the Mainpage Manager through these steps:
+
+1. **Navigate to Mainpage Manager** — Select "Mainpage Manager" from the sidebar menu
+2. **Open Edit Mode** — Click the "Edit Mainpage" button to modify content
+3. **Update Content** — Make changes to banners, text, or featured sections
+4. **Preview Changes** — Use the preview function to review updates
+5. **Save and Publish** — Confirm changes with the "Publish Mainpage" button
+
+## Editable Mainpage Elements
+
+The Mainpage Manager allows administrators to modify the following elements:
+
+- **Banner Images** — Upload high-quality images for the mainpage carousel
+- **Welcome Message** — Edit the introductory text displayed to users
+- **Featured Events** — Select events to highlight on the mainpage
+- **Announcements** — Add or update system-wide announcements
+- **Quick Links** — Customize links to key system sections
+
+## Configuring Banner Images
+
+To update the mainpage carousel:
+
+- **Upload Images** — Select image files (JPEG or PNG) for the carousel
+- **Set Display Order** — Arrange images using drag-and-drop functionality
+- **Add Captions** — Include short captions or calls-to-action for each image
+- **Image Requirements** — Use high-resolution images (1920x1080 recommended)
+- **Storage** — Images are stored securely in cloud storage with progress indicators
+
+## Managing Featured Events
+
+Highlight important events on the mainpage:
+
+- **Select Events** — Choose from the list of existing events
+- **Set Display Limit** — Limit the number of featured events (up to 5 recommended)
+- **Customize Display** — Add custom text or images for each featured event
+- **Automatic Updates** — Featured events update automatically based on event status
+- **Event Linking** — Ensure featured events link to their respective details pages
+
+## Adding Announcements
+
+To create or update announcements:
+
+1. **Access Announcements Section** — Open the announcements editor in Mainpage Manager
+2. **Enter Announcement Text** — Provide concise, clear messages
+3. **Set Visibility Dates** — Specify start and end dates for announcement display
+4. **Choose Priority** — Mark as "High" or "Standard" to control visibility
+5. **Save Announcement** — Publish to make it visible to all users
+
+## Best Practices for Mainpage Management
+
+- **Keep Content Fresh** — Update banners and announcements regularly
+- **Use High-Quality Images** — Ensure visuals are professional and relevant
+- **Prioritize Key Events** — Highlight upcoming or high-impact events
+- **Test Previews** — Always preview changes before publishing
+- **Monitor Engagement** — Track user interactions with mainpage content
+
+## Security Considerations
+
+- **Access Control** — Only administrators can modify mainpage content
+- **Audit Logging** — All changes are recorded in the system audit trail
+- **Image Validation** — System checks for valid image formats and sizes
+- **Content Approval** — Optional approval workflows for sensitive updates
+- **Backup System** — Changes are backed up to prevent data loss
+
+## Troubleshooting Mainpage Issues
+
+If mainpage content isn’t displaying correctly:
+
+- **Verify Permissions** — Ensure you have administrator access
+- **Check Image Formats** — Confirm images meet system requirements
+- **Clear Cache** — Refresh browser cache if updates don’t appear
+- **Review Logs** — Check audit logs for errors during publishing
+- **Contact Support** — Reach out if issues persist
+  `,
+  'prt-1': `
+    # Managing Partners
+
+The Partners section in the 5th CRG Admin System allows administrators to manage external organizations or individuals collaborating with the system, ensuring smooth coordination and visibility.
+
+## Partners Management Overview
+
+Partners are external entities associated with events or activities, such as sponsors, vendors, or collaborators.
+
+- **Access Partners Management** 🤝 — Navigate to Partners via the sidebar menu
+- **Add Partners** ➕ — Create new partner profiles
+- **Manage Relationships** 📊 — Link partners to events or activities
+- **Track Interactions** 📋 — Monitor partner engagement and contributions
+
+## Adding a New Partner
+
+To create a new partner profile:
+
+1. **Navigate to Partners** — Select "Partners" from the sidebar menu
+2. **Open Creation Form** — Click the "+ Add New Partner" button
+3. **Enter Partner Details** — Complete all required fields
+4. **Save Partner** — Confirm to add the partner to the system
+5. **Assign Relationships** — Link the partner to relevant events or activities
+
+## Required Partner Information
+
+When creating a partner profile, include:
+
+- **Partner Name** — The official name of the organization or individual
+- **Contact Information** — Email, phone number, and address
+- **Partner Type** — Select from Sponsor, Vendor, Collaborator, or Other
+- **Description** — Brief overview of the partner’s role or contribution
+- **Logo (Optional)** — Upload a partner logo for display purposes
+
+## Managing Partner Relationships
+
+To associate partners with events or activities:
+
+- **Select Partner** — Choose a partner from the Partners List
+- **Link to Event/Activity** — Use the dropdown to assign to specific events or activities
+- **Define Role** — Specify the partner’s role (e.g., Sponsor, Organizer)
+- **Track Contributions** — Record financial or in-kind contributions
+- **Update Status** — Mark partnerships as Active, Inactive, or Completed
+
+## Uploading Partner Logos
+
+To add visual identification:
+
+- **Select Image** — Upload a logo file (JPEG or PNG)
+- **Preview Logo** — View the logo before saving
+- **Storage** — Logos are stored in cloud storage with progress indicators
+- **Image Requirements** — Use high-resolution images (300x300 minimum)
+- **Remove Option** — Delete or replace logos as needed
+
+## Best Practices for Partner Management
+
+- **Accurate Information** — Ensure partner details are current and correct
+- **Clear Roles** — Define each partner’s role in events or activities
+- **Regular Updates** — Review partner profiles for outdated information
+- **Secure Storage** — Protect sensitive partner data with access controls
+- **Engagement Tracking** — Monitor partner interactions for future collaborations
+
+## Security Considerations
+
+- **Access Restrictions** — Only administrators can manage partner profiles
+- **Data Privacy** — Partner contact information is encrypted and access-controlled
+- **Audit Trail** — All partner-related actions are logged
+- **Role-Based Access** — Limit partner data visibility to relevant users
+- **Compliance** — Follow organizational data protection policies
+
+## Troubleshooting Partner Issues
+
+If partner information isn’t displaying or linking correctly:
+
+- **Verify Permissions** — Ensure you have access to Partners Management
+- **Check Data Entry** — Confirm all required fields are completed
+- **Review Links** — Ensure partners are correctly linked to events/activities
+- **Clear Cache** — Refresh browser cache if updates don’t appear
+- **System Logs** — Check logs for errors in partner profile creation
+  `,
+  'inq-1': `
+   # Handling Inquiries
+
+The Inquiries section in the 5th CRG Admin System enables administrators to manage user-submitted questions, support requests, and feedback efficiently.
+
+## Inquiries Management Overview
+
+The Inquiries system centralizes communication, allowing administrators to track, respond to, and resolve user inquiries.
+
+- **Access Inquiries** 📧 — Navigate to Inquiries via the sidebar menu
+- **View Submissions** 📬 — See all user inquiries in a centralized dashboard
+- **Respond to Inquiries** ✉️ — Send replies directly through the system
+- **Track Status** ✅ — Monitor inquiry resolution progress
+
+## Accessing the Inquiries Dashboard
+
+To manage inquiries:
+
+1. **Navigate to Inquiries** — Select "Inquiries" from the sidebar menu
+2. **View Inquiry List** — See all inquiries with details like submitter, date, and status
+3. **Filter Inquiries** — Sort by status (Open, In Progress, Resolved) or date
+4. **Open Inquiry** — Click an inquiry to view details and respond
+5. **Update Status** — Mark inquiries as In Progress or Resolved after action
+
+## Inquiry Details
+
+Each inquiry includes:
+
+- **Submitter Information** — Name and email of the user who submitted the inquiry
+- **Inquiry Type** — Categorized as Question, Support Request, or Feedback
+- **Submission Date** — Timestamp of when the inquiry was submitted
+- **Message Content** — Full text of the user’s inquiry
+- **Attachments (Optional)** — Files uploaded by the user (e.g., screenshots)
+
+## Responding to Inquiries
+
+To reply to an inquiry:
+
+1. **Open Inquiry** — Click the inquiry from the Inquiries List
+2. **Compose Response** — Enter your reply in the response field
+3. **Attach Files (Optional)** — Upload supporting documents if needed
+4. **Send Response** — Click "Send" to notify the user via email
+5. **Update Status** — Mark the inquiry as In Progress or Resolved
+
+## Managing Inquiry Status
+
+Track and update inquiry progress:
+
+- **Open** — New inquiries awaiting response
+- **In Progress** — Inquiries with active communication
+- **Resolved** — Inquiries fully addressed and closed
+- **Reopen Option** — Ability to reopen resolved inquiries if needed
+- **Notifications** — Users receive email updates on status changes
+
+## Best Practices for Inquiry Management
+
+- **Timely Responses** — Reply to inquiries within 24-48 hours
+- **Clear Communication** — Use concise, professional language in responses
+- **Status Updates** — Keep users informed of progress
+- **Organized Tracking** — Use filters to prioritize urgent inquiries
+- **Documentation** — Log all responses for future reference
+
+## Security Considerations
+
+- **Access Control** — Only administrators can view and respond to inquiries
+- **Data Privacy** — Inquiry data is encrypted and access-restricted
+- **Audit Logging** — All actions on inquiries are recorded
+- **Secure Attachments** — Uploaded files are scanned for security
+- **Compliance** — Follow organizational data protection standards
+
+## Troubleshooting Inquiry Issues
+
+If inquiries aren’t displaying or responses aren’t sending:
+
+- **Verify Permissions** — Ensure you have access to Inquiries Management
+- **Check Filters** — Confirm filters aren’t hiding inquiries
+- **Test Email System** — Verify email notifications are functioning
+- **Review Logs** — Check system logs for errors in inquiry processing
+- **Contact Support** — Escalate persistent issues to technical support
+  `
   };
 
     const renderArticleContent = (articleId) => {

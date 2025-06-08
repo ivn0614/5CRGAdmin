@@ -32,7 +32,6 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  // Render the protected component if authenticated
   return children;
 };
 

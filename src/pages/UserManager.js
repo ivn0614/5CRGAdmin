@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Layout from '../components/Layout';
 import { 
-  getAuth, 
+  getAuth,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
 } from 'firebase/auth';
@@ -17,47 +17,72 @@ import {
 } from 'firebase/database';
 import { db, auth } from '../Firebase';
 import { useNavigate } from 'react-router-dom';
+
 const userService = {
-  async createUser(userData, password) {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, password);
+  // Updated createUser function
+async createUser(userData, password) {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, userData.email, password);
 
-      const firestoreData = {
-        uid: userCredential.user.uid,
-        email: userData.email,
-        fullName: userData.fullName,
-        position: userData.position || "",
-        department: userData.department || "",
-        createdAt: new Date().toISOString(),
-        createdBy: userData.createdBy || "system"
-      };
+    const firestoreData = {
+      uid: userCredential.user.uid,
+      email: userData.email,
+      fullName: userData.fullName,
+      position: userData.position || "",
+      role: userData.position === "Admin" ? "admin" : "user", // Add role field
+      department: userData.department || "",
+      createdAt: new Date().toISOString(),
+      createdBy: userData.createdBy || "system"
+    };
 
-      const userRef = ref(db, 'users/' + userCredential.user.uid);
-      await set(userRef, firestoreData);
+    const userRef = ref(db, 'users/' + userCredential.user.uid);
+    await set(userRef, firestoreData);
 
-      return {
-        id: userCredential.user.uid,
-        ...firestoreData,
-      };
-    } catch (error) {
-      console.error("Error creating user:", error);
-      throw error;
-    }
-  },
+    return {
+      id: userCredential.user.uid,
+      ...firestoreData,
+    };
+  } catch (error) {
+    console.error("Error creating user:", error);
+    throw error;
+  }
+},
 
-  async updateUser(userId, userData) {
-    try {
-      const userRef = ref(db, 'users/' + userId);
-      await update(userRef, {
-        ...userData,
-        updatedAt: new Date().toISOString()
-      });
+async updateUserPassword(userId, newPassword) {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+    
+    if (user && user.uid === userId) {
+      // Can only update current user's password from client-side
+      await user.updatePassword(newPassword);
       return true;
-    } catch (error) {
-      console.error("Error updating user:", error);
-      throw error;
+    } else {
+      // For updating other users' passwords, you'd need Firebase Admin SDK on server
+      throw new Error("Password updates for other users require server-side implementation");
     }
-  },
+  } catch (error) {
+    console.error("Error updating password:", error);
+    throw error;
+  }
+},
+
+// Updated updateUser function
+async updateUser(userId, userData) {
+  try {
+    const userRef = ref(db, 'users/' + userId);
+    const updateData = {
+      ...userData,
+      role: userData.position === "Admin" ? "admin" : "user", // Update role field
+      updatedAt: new Date().toISOString()
+    };
+    await update(userRef, updateData);
+    return true;
+  } catch (error) {
+    console.error("Error updating user:", error);
+    throw error;
+  }
+},
 
   async deleteUser(userId) {
     try {
@@ -78,7 +103,6 @@ const userService = {
         const snapshot = await get(usersQuery);
         
         if (!snapshot.exists()) return [];
-        
         const usersList = [];
         snapshot.forEach(childSnapshot => {
           usersList.push({
@@ -113,6 +137,7 @@ const userService = {
       throw error;
     }
   },
+  
 
   async getCurrentUserData(userId) {
     try {
@@ -141,7 +166,13 @@ const UsersPage = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [users, setUsers] = useState([]);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinCode, setPinCode] = useState('');
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [pinError, setPinError] = useState('');
+  const ADMIN_PIN = '531870';
   const [formData, setFormData] = useState({
+  
     email: '',
     password: '',
     fullName: '',
@@ -158,19 +189,56 @@ const UsersPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [usersCache, setUsersCache] = useState(null);
-  const [lastFetchTime, setLastFetchTime] = useState(null);
   const [redirectMessage, setRedirectMessage] = useState(false);
-  const CACHE_DURATION = 5 * 60 * 1000;
   
   const departmentOptions = ["IDT", "Operations", "Logistics", "Finance", "Group Commander"];
   
   const pendingOperationRef = useRef(null);
+  const refreshIntervalRef = useRef(null);
 
   const showNotification = useCallback((message, type) => {
     setNotification({ show: true, message, type });
     setTimeout(() => setNotification({ show: false, message: '', type: '' }), 5000);
   }, []);
+
+  const fetchUsers = useCallback(async (showLoading = false) => {
+    if (!isAuthorized) return;
+    
+    if (showLoading) {
+      setIsLoading(true);
+    }
+    
+    try {
+      const usersList = await userService.fetchUsers();
+      setUsers(usersList);
+    } catch (err) {
+      showNotification("Failed to fetch users: " + err.message, "error");
+      console.error("Fetch users error:", err);
+    } finally {
+      if (showLoading) {
+        setIsLoading(false);
+      }
+    }
+  }, [showNotification, isAuthorized]);
+
+  // Auto-refresh every 10 seconds
+  useEffect(() => {
+    if (isAuthorized) {
+      // Initial fetch with loading indicator
+      fetchUsers(true);
+      
+      // Set up interval for auto-refresh (without loading indicator)
+      refreshIntervalRef.current = setInterval(() => {
+        fetchUsers(false);
+      }, 10000); // 10 seconds
+    }
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [isAuthorized, fetchUsers]);
 
   useEffect(() => {
     if (!db || !auth) {
@@ -189,7 +257,6 @@ const UsersPage = () => {
           setCurrentUserData(userData);
           if (userData && userData.position === "Admin") {
             setIsAuthorized(true);
-            fetchUsers(true);
           } else {
             setIsAuthorized(false);
             setRedirectMessage(true);
@@ -214,37 +281,12 @@ const UsersPage = () => {
 
     return () => unsubscribe();
   }, [navigate, showNotification]);
-  const fetchUsers = useCallback(async (forceRefresh = false) => {
-    if (!isAuthorized) return;
-    
-    const now = Date.now();
-    if (
-      !forceRefresh &&
-      usersCache &&
-      lastFetchTime &&
-      now - lastFetchTime < CACHE_DURATION
-    ) {
-      setUsers(usersCache);
-      return;
-    }
 
-    setIsLoading(true);
-    try {
-      const usersList = await userService.fetchUsers();
-      setUsers(usersList);
-      setUsersCache(usersList);
-      setLastFetchTime(now);
-    } catch (err) {
-      showNotification("Failed to fetch users: " + err.message, "error");
-      console.error("Fetch users error:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [usersCache, lastFetchTime, showNotification, isAuthorized]);
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
     if (!formData.email || !formData.password || !formData.fullName) {
@@ -286,47 +328,67 @@ const UsersPage = () => {
       setIsSubmitting(false);
     }
   };
-  const handleUpdateUser = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    setIsSubmitting(true);
 
-    try {
-      const updatedData = {
-        fullName: formData.fullName,
-        position: formData.position,
-        department: formData.department,
-        updatedBy: currentUser ? currentUser.uid : "system"
-      };
-      
-      await userService.updateUser(currentUserId, updatedData);
-      
-      setUsers(prev => prev.map(user => 
-        user.id === currentUserId ? { 
-          ...user, 
-          ...updatedData,
-          updatedAt: new Date().toISOString()
-        } : user
-      ));
+const handleUpdateUser = async (e) => {
+  e.preventDefault();
+  if (isSubmitting) return;
+  setIsSubmitting(true);
 
+  try {
+    const updatedData = {
+      fullName: formData.fullName,
+      position: formData.position,
+      department: formData.department,
+      updatedBy: currentUser ? currentUser.uid : "system"
+    };
+    
+    await userService.updateUser(currentUserId, updatedData);
+    
+    // Handle password update if provided
+    if (formData.password && formData.password.trim() !== '') {
+      try {
+        // Note: This will only work for the current user due to Firebase security rules
+        // For other users, you'd need server-side implementation
+        if (currentUserId === currentUser?.uid) {
+          await userService.updateUserPassword(currentUserId, formData.password);
+          showNotification("User and password updated successfully!", "success");
+        } else {
+          showNotification("User updated successfully! Note: Password updates for other users require server-side implementation.", "warning");
+        }
+      } catch (passwordError) {
+        console.error("Password update error:", passwordError);
+        showNotification("User updated successfully, but password update failed: " + passwordError.message, "warning");
+      }
+    } else {
       showNotification("User updated successfully!", "success");
-      setIsEditing(false);
-      setCurrentUserId(null);
-      
-      setFormData({
-        email: '',
-        password: '',
-        fullName: '',
-        position: 'User',
-        department: 'IDT'
-      });
-    } catch (err) {
-      console.error("Update user error:", err);
-      showNotification("Error updating user: " + err.message, "error");
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+    
+    setUsers(prev => prev.map(user => 
+      user.id === currentUserId ? { 
+        ...user, 
+        ...updatedData,
+        updatedAt: new Date().toISOString()
+      } : user
+    ));
+
+    setIsEditing(false);
+    setCurrentUserId(null);
+    
+    setFormData({
+      email: '',
+      password: '',
+      fullName: '',
+      position: 'User',
+      department: 'IDT'
+    });
+  } catch (err) {
+    console.error("Update user error:", err);
+    showNotification("Error updating user: " + err.message, "error");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
   const handleEdit = (user) => {
     setFormData({
       email: user.email,
@@ -339,21 +401,59 @@ const UsersPage = () => {
     setIsEditing(true);
   };
 
-  const handleDelete = async (userId) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      setIsLoading(true);
-      try {
-        await userService.deleteUser(userId);
-        setUsers(prev => prev.filter(user => user.id !== userId));
-        showNotification("User deleted successfully!", "success");
-      } catch (err) {
-        console.error("Delete user error:", err);
-        showNotification("Error deleting user: " + err.message, "error");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
+const handleDelete = (userId, userName) => {
+  setUserToDelete({ id: userId, name: userName });
+  setShowPinModal(true);
+  setPinCode('');
+  setPinError('');
+};
+
+const handlePinSubmit = async () => {
+  if (pinCode !== ADMIN_PIN) {
+    setPinError('Invalid PIN code');
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    await userService.deleteUser(userToDelete.id);
+    setUsers(prev => prev.filter(user => user.id !== userToDelete.id));
+    
+    // Close modal first
+    setShowPinModal(false);
+    setUserToDelete(null);
+    setPinCode('');
+    setPinError('');
+
+    showNotification("User deleted successfully!", "success");
+  } catch (err) {
+    console.error("Delete user error:", err);
+    
+    setShowPinModal(false);
+    setUserToDelete(null);
+    setPinCode('');
+    setPinError('');
+    
+    showNotification("Error deleting user: " + err.message, "error");
+  } finally {
+    setIsLoading(false);
+  }
+};
+const handlePinCancel = () => {
+  setShowPinModal(false);
+  setUserToDelete(null);
+  setPinCode('');
+  setPinError('');
+};
+
+const handlePinChange = (e) => {
+  const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+  if (value.length <= 6) {
+    setPinCode(value);
+    setPinError(''); // Clear error when user types
+  }
+};
+
   const handleCancel = () => {
     setIsEditing(false);
     setCurrentUserId(null);
@@ -365,6 +465,7 @@ const UsersPage = () => {
       department: 'IDT'
     });
   };
+
   if (isAuthChecking) {
     return (
       <Layout>
@@ -380,6 +481,7 @@ const UsersPage = () => {
       </Layout>
     );
   }
+
   if (redirectMessage) {
     return (
       <Layout>
@@ -399,9 +501,11 @@ const UsersPage = () => {
       </Layout>
     );
   }
+
   if (!isAuthorized) {
     return null;
   }
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-8">
@@ -423,6 +527,7 @@ const UsersPage = () => {
             <span className="block sm:inline">{notification.message}</span>
           </div>
         )}
+
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">
             {isEditing ? 'Edit User' : 'Create New User'}
@@ -430,59 +535,58 @@ const UsersPage = () => {
           
           <form onSubmit={isEditing ? handleUpdateUser : handleCreateUser}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={isEditing}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  required
-                  autoComplete="email"
-                />
-              </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
+                Email *
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isEditing}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+                autoComplete="email"
+              />
+            </div>
 
-              {!isEditing && (
-                <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-                    Password *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      id="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                      required={!isEditing}
-                      minLength="6"
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+                Password {isEditing ? "(leave blank to keep current)" : "*"}
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  required={!isEditing}
+                  minLength="6"
+                  autoComplete={isEditing ? "current-password" : "new-password"}
+                  placeholder={isEditing ? "Enter new password to change" : ""}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
 
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="fullName">
@@ -559,20 +663,76 @@ const UsersPage = () => {
             </div>
           </form>
         </div>
+
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">Users List ({users.length})</h2>
-            <button 
-              onClick={() => fetchUsers(true)}
-              className="flex items-center bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-300 ease-in-out shadow-sm"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh Data
-            </button>
+            <div className="text-sm text-gray-500">
+              Auto-refreshes every 10 seconds
+            </div>
           </div>
-          
+          {/* PIN Verification Modal - ADD IT HERE */}
+          {showPinModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+                <div className="text-center mb-6">
+                  <svg className="mx-auto h-12 w-12 text-red-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Confirm User Deletion
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    You are about to delete user: <span className="font-semibold">{userToDelete?.name}</span>
+                  </p>
+                  <p className="text-gray-600 mb-4">
+                    Enter your 6-digit admin PIN to confirm this action.
+                  </p>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">
+                    Admin PIN
+                  </label>
+                  <input
+                    type="password"
+                    value={pinCode}
+                    onChange={handlePinChange}
+                    className={`w-full px-3 py-2 border rounded-lg text-center text-2xl tracking-widest focus:outline-none focus:ring-2 ${
+                      pinError 
+                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                    }`}
+                    placeholder="••••••"
+                    maxLength="6"
+                    autoFocus
+                  />
+                  {pinError && (
+                    <p className="text-red-500 text-sm mt-2 text-center">{pinError}</p>
+                  )}
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handlePinCancel}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out"
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePinSubmit}
+                    disabled={pinCode.length !== 6 || isLoading}
+                    className={`flex-1 font-bold py-2 px-4 rounded transition duration-150 ease-in-out ${
+                      pinCode.length === 6 && !isLoading
+                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {isLoading ? 'Deleting...' : 'Delete User'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {isLoading && users.length === 0 ? (
             <div className="flex justify-center items-center py-8">
               <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -619,7 +779,7 @@ const UsersPage = () => {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDelete(user.id, user.fullName)}
                             className="text-red-600 hover:text-red-800"
                             title="Delete User"
                           >
@@ -634,6 +794,7 @@ const UsersPage = () => {
                 </tbody>
               </table>
             </div>
+            
           )}
         </div>
       </div>
