@@ -191,7 +191,7 @@ const UsersPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [redirectMessage, setRedirectMessage] = useState(false);
   
-  const departmentOptions = ["IDT", "Operations", "Logistics", "Finance", "Group Commander"];
+  const departmentOptions = ["IDT", "Operations", "Logistics", "Finance", "Group Commander", "52nd CMOU"];
   
   const pendingOperationRef = useRef(null);
   const refreshIntervalRef = useRef(null);
