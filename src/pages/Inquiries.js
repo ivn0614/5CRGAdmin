@@ -3,28 +3,185 @@ import Layout from '../components/Layout';
 import { firestore } from '../Firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 
+const Toast = ({ message, type, onClose }) => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, 4000);
+
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    const getToastStyles = () => {
+        switch (type) {
+            case 'success':
+                return 'bg-green-500 border-green-600 text-white';
+            case 'error':
+                return 'bg-red-500 border-red-600 text-white';
+            case 'warning':
+                return 'bg-yellow-500 border-yellow-600 text-white';
+            case 'info':
+                return 'bg-blue-500 border-blue-600 text-white';
+            default:
+                return 'bg-gray-500 border-gray-600 text-white';
+        }
+    };
+
+    const getIcon = () => {
+        switch (type) {
+            case 'success':
+                return '✅';
+            case 'error':
+                return '❌';
+            case 'warning':
+                return '⚠️';
+            case 'info':
+                return 'ℹ️';
+            default:
+                return '📢';
+        }
+    };
+
+    return (
+        <div className={`fixed top-4 right-4 z-50 border-l-4 p-4 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out ${getToastStyles()} max-w-md`}>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                    <span className="text-xl mr-3">{getIcon()}</span>
+                    <span className="font-medium">{message}</span>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="ml-4 text-white hover:text-gray-200 font-bold text-lg"
+                >
+                    ×
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// Confirmation Modal Component
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Delete", cancelText = "Cancel", type = "danger" }) => {
+    if (!isOpen) return null;
+
+    const getConfirmButtonStyles = () => {
+        switch (type) {
+            case 'danger':
+                return 'bg-red-600 hover:bg-red-700 text-white';
+            case 'warning':
+                return 'bg-yellow-600 hover:bg-yellow-700 text-white';
+            case 'info':
+                return 'bg-blue-600 hover:bg-blue-700 text-white';
+            default:
+                return 'bg-gray-600 hover:bg-gray-700 text-white';
+        }
+    };
+
+    const getIcon = () => {
+        switch (type) {
+            case 'danger':
+                return '🗑️';
+            case 'warning':
+                return '⚠️';
+            case 'info':
+                return 'ℹ️';
+            default:
+                return '❓';
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all duration-300 scale-100">
+                <div className="p-6">
+                    <div className="flex items-center mb-4">
+                        <div className="flex-shrink-0">
+                            <span className="text-3xl">{getIcon()}</span>
+                        </div>
+                        <div className="ml-4">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                {title}
+                            </h3>
+                        </div>
+                    </div>
+                    <div className="mb-6">
+                        <p className="text-gray-600">
+                            {message}
+                        </p>
+                    </div>
+                    <div className="flex justify-end space-x-3">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                        >
+                            {cancelText}
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className={`px-4 py-2 rounded-lg transition-colors font-medium ${getConfirmButtonStyles()}`}
+                        >
+                            {confirmText}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const InquiriesPage = () => {
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [toast, setToast] = useState(null); // Toast state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    type: 'danger'
+  });
 
   useEffect(() => {
     const fetchInquiries = async () => {
       try {
+        console.log('Fetching inquiries...');
         const inquiriesCollection = collection(firestore, 'inquiries');
-        const inquiriesQuery = query(inquiriesCollection, orderBy('createdAt', 'desc'));
+        
+        // Use submittedAt instead of createdAt for ordering
+        const inquiriesQuery = query(inquiriesCollection, orderBy('submittedAt', 'desc'));
         const snapshot = await getDocs(inquiriesQuery);
         
-        const inquiriesArray = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        console.log('Documents found:', snapshot.size);
         
+        const inquiriesArray = snapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Document data:', data);
+          
+          return {
+            id: doc.id,
+            // Map Firebase fields to expected fields
+            fullName: data.name || '', // name -> fullName
+            organization: data.organization || '',
+            email: data.email || '',
+            contactNumber: data.phone || '', // phone -> contactNumber
+            message: data.message || '',
+            status: data.status || 'new',
+            createdAt: data.submittedAt || data.submittedAt, // submittedAt -> createdAt
+            updatedAt: data.updatedAt || data.submittedAt,
+            source: data.source || '',
+            // Keep original fields as backup
+            ...data
+          };
+        });
+        
+        console.log('Processed inquiries:', inquiriesArray);
         setInquiries(inquiriesArray);
       } catch (error) {
         console.error("Error fetching inquiries:", error);
+        showToast(`Error loading inquiries: ${error.message}`, "error");
       } finally {
         setLoading(false);
       }
@@ -48,36 +205,42 @@ const InquiriesPage = () => {
           : inquiry
       ));
       
-      alert("Status updated successfully!");
+      showToast("Status updated successfully!", "success");
     } catch (error) {
       console.error("Error updating status:", error);
-      alert("Failed to update status. Please try again.");
+      showToast("Failed to update status. Please try again.", "error");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteInquiry = async (inquiryId) => {
-    if (!window.confirm('Are you sure you want to delete this inquiry?')) return;
-    
-    setLoading(true);
-    
-    try {
-      await deleteDoc(doc(firestore, 'inquiries', inquiryId));
-      setInquiries(inquiries.filter(inquiry => inquiry.id !== inquiryId));
-      
-      if (selectedInquiry && selectedInquiry.id === inquiryId) {
-        setSelectedInquiry(null);
-        setShowDetails(false);
-      }
-      
-      alert("Inquiry deleted successfully!");
-    } catch (error) {
-      console.error("Error deleting inquiry:", error);
-      alert("Failed to delete inquiry. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    showConfirmModal(
+      "Delete Inquiry",
+      "Are you sure you want to delete this inquiry? This action cannot be undone.",
+      async () => {
+        setLoading(true);
+        
+        try {
+          await deleteDoc(doc(firestore, 'inquiries', inquiryId));
+          setInquiries(inquiries.filter(inquiry => inquiry.id !== inquiryId));
+          
+          if (selectedInquiry && selectedInquiry.id === inquiryId) {
+            setSelectedInquiry(null);
+            setShowDetails(false);
+          }
+          
+          showToast("Inquiry deleted successfully!", "success");
+        } catch (error) {
+          console.error("Error deleting inquiry:", error);
+          showToast("Failed to delete inquiry. Please try again.", "error");
+        } finally {
+          setLoading(false);
+          closeConfirmModal();
+        }
+      },
+      "danger"
+    );
   };
 
   const handleViewDetails = (inquiry) => {
@@ -85,7 +248,37 @@ const InquiriesPage = () => {
     setShowDetails(true);
   };
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const closeToast = () => {
+    setToast(null);
+  };
+
+  const showConfirmModal = (title, message, onConfirm, type = 'danger') => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      type
+    });
+  };
+
+  const closeConfirmModal = () => {
+    setConfirmModal({
+      isOpen: false,
+      title: '',
+      message: '',
+      onConfirm: null,
+      type: 'danger'
+    });
+  };
+
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
     const options = { 
       year: 'numeric', 
       month: 'short', 
@@ -93,7 +286,19 @@ const InquiriesPage = () => {
       hour: '2-digit',
       minute: '2-digit'
     };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    
+    // Handle both timestamp and ISO string formats
+    let date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString.toDate) {
+      // Firestore timestamp
+      date = dateString.toDate();
+    } else {
+      date = new Date(dateString);
+    }
+    
+    return date.toLocaleDateString(undefined, options);
   };
 
   const getStatusBadgeClass = (status) => {
@@ -133,6 +338,24 @@ const InquiriesPage = () => {
 
   return (
     <Layout>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={closeToast}
+        />
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirmModal}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+      />
+
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-navy-900">Partnership Inquiries</h1>
@@ -151,6 +374,8 @@ const InquiriesPage = () => {
           </button>
         )}
       </div>
+
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow-md p-4 text-center">
           <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
@@ -183,7 +408,7 @@ const InquiriesPage = () => {
           <div className="flex justify-between items-start mb-6">
             <div>
               <h2 className="text-xl font-bold text-navy-900 mb-2">Inquiry Details</h2>
-              <p className="text-gray-600">Submitted on {formatDate(selectedInquiry.createdAt)}</p>
+              <p className="text-gray-600">Submitted on {formatDate(selectedInquiry.createdAt || selectedInquiry.submittedAt)}</p>
             </div>
             <div className="flex items-center space-x-2">
               <select
@@ -214,7 +439,7 @@ const InquiriesPage = () => {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-600">Full Name</label>
-                  <p className="text-gray-800">{selectedInquiry.fullName}</p>
+                  <p className="text-gray-800">{selectedInquiry.fullName || selectedInquiry.name}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600">Organization</label>
@@ -231,11 +456,17 @@ const InquiriesPage = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-600">Contact Number</label>
                   <p className="text-gray-800">
-                    <a href={`tel:${selectedInquiry.contactNumber}`} className="text-blue-600 hover:underline">
-                      {selectedInquiry.contactNumber}
+                    <a href={`tel:${selectedInquiry.contactNumber || selectedInquiry.phone}`} className="text-blue-600 hover:underline">
+                      {selectedInquiry.contactNumber || selectedInquiry.phone}
                     </a>
                   </p>
                 </div>
+                {selectedInquiry.source && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600">Source</label>
+                    <p className="text-gray-800">{selectedInquiry.source}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -250,9 +481,9 @@ const InquiriesPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600">Submitted</label>
-                  <p className="text-gray-800">{formatDate(selectedInquiry.createdAt)}</p>
+                  <p className="text-gray-800">{formatDate(selectedInquiry.createdAt || selectedInquiry.submittedAt)}</p>
                 </div>
-                {selectedInquiry.updatedAt && selectedInquiry.updatedAt !== selectedInquiry.createdAt && (
+                {selectedInquiry.updatedAt && selectedInquiry.updatedAt !== (selectedInquiry.createdAt || selectedInquiry.submittedAt) && (
                   <div>
                     <label className="block text-sm font-medium text-gray-600">Last Updated</label>
                     <p className="text-gray-800">{formatDate(selectedInquiry.updatedAt)}</p>
@@ -317,7 +548,7 @@ const InquiriesPage = () => {
                   {filteredInquiries.map((inquiry) => (
                     <tr key={inquiry.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="py-3 px-4">
-                        <div className="font-medium text-gray-800">{inquiry.fullName}</div>
+                        <div className="font-medium text-gray-800">{inquiry.fullName || inquiry.name}</div>
                       </td>
                       <td className="py-3 px-4">{inquiry.organization}</td>
                       <td className="py-3 px-4">
@@ -326,8 +557,8 @@ const InquiriesPage = () => {
                         </a>
                       </td>
                       <td className="py-3 px-4">
-                        <a href={`tel:${inquiry.contactNumber}`} className="text-blue-600 hover:underline">
-                          {inquiry.contactNumber}
+                        <a href={`tel:${inquiry.contactNumber || inquiry.phone}`} className="text-blue-600 hover:underline">
+                          {inquiry.contactNumber || inquiry.phone}
                         </a>
                       </td>
                       <td className="py-3 px-4">
@@ -336,7 +567,7 @@ const InquiriesPage = () => {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-sm">
-                        {formatDate(inquiry.createdAt)}
+                        {formatDate(inquiry.createdAt || inquiry.submittedAt)}
                       </td>
                       <td className="py-3 px-4">
                         <button 
