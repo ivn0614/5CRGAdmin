@@ -296,10 +296,6 @@ const EventsPage = () => {
     setError(null);
 
     try {
-      // Validate dates
-      if (new Date(formData.startDate) > new Date(formData.endDate)) {
-        throw new Error("Start date cannot be after end date");
-      }
 
       let eventId = currentEventId;
       let logoURL = null;
@@ -339,7 +335,7 @@ const EventsPage = () => {
           id: eventId,
           ...eventData,
           logoURL: logoURL,
-          createdAt: new Date().toISOString(), // For display purposes
+          createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
         
@@ -554,26 +550,24 @@ const EventsPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-2">Start Date *</label>
+                <label className="block text-gray-700 mb-2">Start Date</label>
                 <input
                   type="date"
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleInputChange}
                   className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                   disabled={loading}
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-2">End Date *</label>
+                <label className="block text-gray-700 mb-2">End Date</label>
                 <input
                   type="date"
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleInputChange}
                   className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                   disabled={loading}
                 />
               </div>
